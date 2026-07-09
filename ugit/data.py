@@ -22,3 +22,9 @@ def hash_object(data):
         out.write(data)
     
     return oid
+
+def get_object(oid):
+    object_path = os.path.join(GIT_DIR, 'objects', oid)
+
+    with open(object_path, 'rb') as f:
+        return f.read()
