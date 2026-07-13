@@ -51,12 +51,37 @@ def get_tree(oid, base_path=''):
             raise ValueError(f'Unknown tree entry {type_}')
     return result
 
+def _empty_current_directory():
+    for root, dirnames, filenames in os.walk('.', topdown=False):
+        for filename in filenames:
+            path = os.path.relpath(os.path.join(root, filename))
+            if is_ignored(path) or not os.path.isfile(path):
+                continue
+        for dirname in dirnames:
+            path = os.path.relpath(os.path.join(root, dirname))
+            if is_ignored(path):
+                continue
+            try:
+                os.rmdir(path)
+            except(OSError):
+                # FileNotFoundError, PermissionError and AlreadyExistsError inherit directly from OSError
+                # deletion might fail if the directory contains ignored files, so it's ok :)
+                pass
+
 def read_tree(tree_oid):
-    """uses get_tree to get the file OIDs and writes them into the working dir"""
+    """uses get_tree to get the file OIDs and writes them into the working dir.
+    Mimics git checkout <old-commit hash>, which never deletes brand-new, untracked files. It instead leaves them alone precisely so I don't accidentally lose hours of uncommitted work just becuase I wanted to look at an old snapshot."""
+    _empty_current_directory()
     for path, oid in get_tree(tree_oid, base_path='./').items():
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, 'wb') as f:
             f.write(data.get_object(oid))
-            
+
 def is_ignored(path):
-    return '.ugit' in Path(path).parts
+    parts = Path(path).parts
+    
+    # Blocking ugit, real git and the venv from being scanned/deleted
+    return ('.ugit' in parts or
+            '.git' in parts or
+            '.venv' in parts or
+            'ugit.egg-info' in parts)
