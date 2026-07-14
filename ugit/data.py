@@ -12,6 +12,10 @@ def init():
         # creates both .ugit (GIT_DIR) and .ugit/objects (join(GIT_DIR, 'objects')) as it creates the latter recursively
         os.makedirs(objects_dir, exist_ok=True)
 
+def set_HEAD(oid):
+    with open(os.path.join(GIT_DIR, "HEAD"), 'w') as f:
+        f.write(oid)
+        
 def hash_object(data, type_='blob'):
     obj = type_.encode() + b'\x00' + data
     oid = hashlib.sha256(obj).hexdigest()
