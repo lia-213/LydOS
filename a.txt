@@ -1,1 +1,1 @@
-version 1 of file a
+contents of a
