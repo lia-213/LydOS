@@ -127,7 +127,7 @@ def get_commit(oid):
 
 def get_oid(name):
 
-    if name == '@' or not name: name = 'HEAD'
+    if name == '@': name = 'HEAD'
 
     refs_to_try = [
         name,
