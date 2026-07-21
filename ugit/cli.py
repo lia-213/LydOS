@@ -82,7 +82,7 @@ def commit(args):
     print(base.commit(args.message))
 
 def log(args):
-    oid = args.oid
+    oid = base.get_oid(args.oid)
     while oid:
         commit = base.get_commit(oid)
 
@@ -96,5 +96,5 @@ def checkout(args):
     base.checkout(args.oid)
 
 def tag(args):
-    oid = args.oid
-    base.create_tag(args.name, args.oid)
+    oid = base.get_oid(args.oid)
+    base.create_tag(args.name, oid)
