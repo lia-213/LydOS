@@ -4,6 +4,10 @@ import argparse
 import os
 import sys
 import textwrap
+import subprocess
+import shutil
+import urllib.parse
+import webbrowser
 
 from . import data
 from . import base
@@ -119,8 +123,51 @@ def k(args):
         oids.add(ref)
     
     for oid in base.iter_commits_and_parents(oids):
-        commit = base.get_commit(oid)
-        print(oid)
-        if commit.parent:
-            print('Parent', commit.parent)
-    # TODO visualise refs
+        dot = 'digraph commits {\n'
+
+        oids = set()
+        for refname, ref in data.iter_refs():
+            dot += f'"{refname}" [shape=note]\n'
+            dot += f'"{refname}" -> "{ref}"\n'
+            oids.add(ref)
+        
+        for oid in base.iter_commits_and_parents(oids):
+            commit = base.get_commit(oid)
+            dot += f'"{oid}" [shape=box style=filled label="{oid[:10]}"]\n'
+            if commit.parent:
+                dot += f'"{oid}" -> "{commit.parent}"\n'
+
+        dot += '}\n'
+
+        # 1. check if 'dot' executable exists on system PATH
+        if shutil.which('dot'):
+            try:
+                # generate image using Graphviz dot
+                proc = subprocess.Popen(
+                    ['dot, '-Tpng],
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE
+                )
+                png_data, _ = proc.communicate(dot.encode())
+
+                # pipe output to macOS Preview app
+                preview_proc = subprocess.Popen(
+                    ['open', '-a', 'Preview.app', '-f'], 
+                    stdin=subprocess.PIPE
+                )
+                preview_proc.communicate(png_data)
+            except Exception as e:
+                print(f'Failed to render locally: {e}')
+                print(dot)
+        else:
+            # 2. fallback: print DOT string and launch online renderer
+            print("Graphviz 'dot' not found on system PATH.")
+            print("--- DOT GRAPH DATA ---")
+            print(dot)
+            print("----------------------")
+
+            # open web visualiser automatically in browser
+            encoded_dot = urllib.parse.quote(dot)
+            url = f"https://quickchart.io/graphviz?graph={encoded_dot}"
+            print(f"Opening graph visually at: {url}")
+            webbrowser.open(url)

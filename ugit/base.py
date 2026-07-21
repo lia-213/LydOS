@@ -5,7 +5,7 @@ import operator
 import os
 import string
 
-from collections import namedtuple
+from collections import namedtuple, deque
 from . import data
 from pathlib import Path
 
@@ -134,18 +134,18 @@ def get_commit(oid):
 
 def iter_commits_and_parents(oids):
     """generator that returns all commits that it can reach from a given set of OIDs"""
-    oids = set(oids)
+    oids = deque(oids)
     visited = set()
 
     while oids:
-        oid = oids.pop()
+        oid = oids.popleft()
         if not oid or oid in visited:
             continue
         visited.add(oid)
         yield oid
 
         commit = get_commit(oid)
-        oids.add(commit.parent)
+        oids.appendleft(commit.parent)
 
 def get_oid(name):
     """Resolve a ref name, tag, branch, or raw object ID into an OID."""
