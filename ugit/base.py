@@ -1,3 +1,5 @@
+"""Core repository tree, commit, and reference operations for ugit."""
+
 import itertools
 import operator
 import os
@@ -56,6 +58,7 @@ def get_tree(oid, base_path=''):
     return result
 
 def _empty_current_directory():
+    """Remove empty directories from the current tree while preserving ignored paths."""
     for root, dirnames, filenames in os.walk('.', topdown=False):
         for filename in filenames:
             path = os.path.relpath(os.path.join(root, filename))
@@ -82,6 +85,7 @@ def read_tree(tree_oid):
             f.write(data.get_object(oid))
 
 def commit(message):
+    """Create a commit object for the current tree and move HEAD to it."""
     commit = f'tree {write_tree()}\n'
 
     HEAD = data.get_ref('HEAD')
@@ -97,17 +101,20 @@ def commit(message):
     return oid
 
 def checkout(oid):
+    """Replace the working tree with the snapshot referenced by a commit OID."""
     commit = get_commit(oid)
     read_tree(commit.tree)
     data.update_ref('HEAD', oid)
 
 def create_tag(name, oid):
+    """Create or update a tag reference for the given object ID."""
     oid = oid or data.get_ref('HEAD')
     data.update_ref(os.path.join('refs', 'tags', name), oid)
 
 Commit = namedtuple('Commit', ['tree', 'parent', 'message'])
 
 def get_commit(oid):
+    """Parse a commit object into its tree, parent, and message fields."""
     parent = None
     
     commit = data.get_object(oid, 'commit').decode()
@@ -125,7 +132,23 @@ def get_commit(oid):
 
     return Commit(tree=tree, parent=parent, message=message)
 
+def iter_commits_and_parents(oids):
+    """generator that returns all commits that it can reach from a given set of OIDs"""
+    oids = set(oids)
+    visited = set()
+
+    while oids:
+        oid = oids.pop()
+        if not oid or oid in visited:
+            continue
+        visited.add(oid)
+        yield oid
+
+        commit = get_commit(oid)
+        oids.add(commit.parent)
+
 def get_oid(name):
+    """Resolve a ref name, tag, branch, or raw object ID into an OID."""
 
     if name == '@': name = 'HEAD'
 
@@ -149,6 +172,7 @@ def get_oid(name):
     raise ValueError(f'unknown name {name}')
 
 def is_ignored(path):
+    """Return True when a path belongs to ugit internals or the local virtualenv."""
     parts = Path(path).parts
     
     # Blocking ugit, real git and the venv from being scanned/deleted

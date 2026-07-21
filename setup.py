@@ -1,4 +1,6 @@
-#/usr/bin/env python3
+#!/usr/bin/env python3
+
+"""Package metadata and installation entry point for ugit."""
 
 from setuptools import setup
 
