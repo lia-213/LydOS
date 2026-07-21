@@ -126,6 +126,9 @@ def get_commit(oid):
     return Commit(tree=tree, parent=parent, message=message)
 
 def get_oid(name):
+
+    if name == '@' or not name: name = 'HEAD'
+
     refs_to_try = [
         name,
         os.path.join('refs', name),
