@@ -111,6 +111,9 @@ def create_tag(name, oid):
     oid = oid or data.get_ref('HEAD')
     data.update_ref(os.path.join('refs', 'tags', name), oid)
 
+def create_branch(name, oid):
+    data.update_ref(os.path.join('refs', 'heads', name), oid)
+    
 Commit = namedtuple('Commit', ['tree', 'parent', 'message'])
 
 def get_commit(oid):
