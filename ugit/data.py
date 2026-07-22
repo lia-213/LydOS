@@ -3,6 +3,8 @@
 import hashlib
 import os
 
+from collections import namedtuple
+
 GIT_DIR = '.ugit'
 
 
@@ -17,13 +19,17 @@ def init():
         os.makedirs(objects_dir, exist_ok=True)
 
 
-def update_ref(ref, oid):
+RefValue = namedtuple('RefValue', ['symbolic', 'value'])
+
+
+def update_ref(ref, value):
     """Write an OID into a named reference under the ugit directory."""
+    if value.symbolic:
+        raise ValueError(f"Expected a concrete value, but got symbolic value: {value}")
     ref_path = os.path.join(GIT_DIR, ref)
     os.makedirs(os.path.dirname(ref_path), exist_ok=True)
-    print(f'writing {oid} to {ref_path}')
     with open(ref_path, 'w') as f:
-        f.write(oid)
+        f.write(value.value)
 
 
 def get_ref(ref):
@@ -31,8 +37,12 @@ def get_ref(ref):
     ref_path = os.path.join(GIT_DIR, ref)
     if os.path.isfile(ref_path):
         with open(ref_path) as f:
-            return f.read().strip()
+            value = f.read().strip()
 
+    if value and value.startswith('ref:'):
+        return get_ref(value.split(':', 1)[1].strip())
+    
+    return RefValue(symbolic=False, value=value)
 
 def iter_refs():
     """Yield all known references together with their resolved OIDs."""

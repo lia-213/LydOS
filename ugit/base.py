@@ -88,7 +88,7 @@ def commit(message):
     """Create a commit object for the current tree and move HEAD to it."""
     commit = f'tree {write_tree()}\n'
 
-    HEAD = data.get_ref('HEAD')
+    HEAD = data.get_ref('HEAD').value
     if HEAD:
         commit += f'parent {HEAD}\n'
     commit += '\n'
@@ -96,7 +96,7 @@ def commit(message):
 
     oid = data.hash_object(commit.encode(), 'commit')
 
-    data.update_ref('HEAD', oid)
+    data.update_ref('HEAD', data.RefValue(symbolic=False, value=oid))
 
     return oid
 
@@ -104,16 +104,16 @@ def checkout(oid):
     """Replace the working tree with the snapshot referenced by a commit OID."""
     commit = get_commit(oid)
     read_tree(commit.tree)
-    data.update_ref('HEAD', oid)
+    data.update_ref('HEAD', data.RefValue(symbolic=False, value=oid))
 
 def create_tag(name, oid):
     """Create or update a tag reference for the given object ID."""
     oid = oid or data.get_ref('HEAD')
-    data.update_ref(os.path.join('refs', 'tags', name), oid)
+    data.update_ref(os.path.join('refs', 'tags', name), data.RefValue(symbolic=False, value=oid))
 
 def create_branch(name, oid):
-    data.update_ref(os.path.join('refs', 'heads', name), oid)
-    
+    data.update_ref(os.path.join('refs', 'heads', name), data.RefValue(symbolic=False, value=oid))
+
 Commit = namedtuple('Commit', ['tree', 'parent', 'message'])
 
 def get_commit(oid):
@@ -164,7 +164,7 @@ def get_oid(name):
 
     for ref in refs_to_try:
         if data.get_ref(ref):
-            return data.get_ref(ref)
+            return data.get_ref(ref).value
         
         # name is SHA256 (64 hex characters)
         # all = effectively one big AND gate

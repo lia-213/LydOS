@@ -120,7 +120,7 @@ def tag(args):
 def branch(args):
     base.create_branch(args.name, args.start_point)
     print(f'Branch {args.name} created at {args.start_point[:10]}')
-    
+
 def k(args):
     """Print the current reference map for debugging purposes."""
     oids = set()
@@ -134,8 +134,8 @@ def k(args):
         oids = set()
         for refname, ref in data.iter_refs():
             dot += f'"{refname}" [shape=note]\n'
-            dot += f'"{refname}" -> "{ref}"\n'
-            oids.add(ref)
+            dot += f'"{refname}" -> "{ref.value}"\n'
+            oids.add(ref.value)
         
         for oid in base.iter_commits_and_parents(oids):
             commit = base.get_commit(oid)
