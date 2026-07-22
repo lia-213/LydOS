@@ -22,29 +22,35 @@ def init():
 RefValue = namedtuple('RefValue', ['symbolic', 'value'])
 
 
-def update_ref(ref, value):
+def update_ref(ref, value, deref=True):
     """Write an OID into a named reference under the ugit directory."""
     if value.symbolic:
         raise ValueError(f"Expected a concrete value, but got symbolic value: {value}")
+    ref = _get_ref_internal(ref, deref)[0]
     ref_path = os.path.join(GIT_DIR, ref)
     os.makedirs(os.path.dirname(ref_path), exist_ok=True)
     with open(ref_path, 'w') as f:
         f.write(value.value)
 
+def get_ref(ref, deref=True):
+    return _get_ref_internal(ref, deref)[1]
 
-def get_ref(ref):
-    """Read a reference file and return its stored OID, if it exists."""
+def _get_ref_internal(ref, deref):
+    """Helper Function: Read a reference file and return its stored OID, if it exists."""
     ref_path = os.path.join(GIT_DIR, ref)
     if os.path.isfile(ref_path):
         with open(ref_path) as f:
             value = f.read().strip()
 
-    if value and value.startswith('ref:'):
-        return get_ref(value.split(':', 1)[1].strip())
+    symbolic = bool(value) and value.startswith('ref:')
+    if symbolic:
+        value = value.split(':', 1)[1].strip()
+        if deref:
+            return _get_ref_internal(value, deref=True)
     
-    return RefValue(symbolic=False, value=value)
+    return ref, RefValue(symbolic=symbolic, value=value)
 
-def iter_refs():
+def iter_refs(deref=True):
     """Yield all known references together with their resolved OIDs."""
     refs = ['HEAD']
     for root, _, filenames in os.walk(os.path.join(GIT_DIR, 'refs')):
@@ -52,7 +58,7 @@ def iter_refs():
         refs.extend(os.path.join(root, name) for name in filenames)
 
     for refname in refs:
-        yield refname, get_ref(refname)
+        yield refname, get_ref(refname, deref=deref)
 
 
 def hash_object(data, type_='blob'):
