@@ -69,6 +69,9 @@ def parse_args():
     k_parser = commands.add_parser('k')
     k_parser.set_defaults(func=k)
 
+    status_parser = commands.add_parser('status')
+    status_parser.set_defaults(func=status)
+
     return parser.parse_args()
 
 def init(args):
@@ -177,3 +180,12 @@ def k(args):
             url = f"https://quickchart.io/graphviz?graph={encoded_dot}"
             print(f"Opening graph visually at: {url}")
             webbrowser.open(url)
+
+def status(args):
+    HEAD = base.get_oid('@')
+    branch = base.get_branch_name()
+
+    if branch:
+        print(f'On branch {branch}')
+    else:
+        print(f'HEAD detached at {HEAD[:10]}')
