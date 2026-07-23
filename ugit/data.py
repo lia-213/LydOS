@@ -1,4 +1,5 @@
-"""Object storage and reference file helpers for ugit."""
+"""Object storage and reference file helpers for ugit.
+Handles everything that directly touches the disk (object database and refs)."""
 
 import hashlib
 import os

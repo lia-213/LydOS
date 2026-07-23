@@ -1,4 +1,5 @@
-"""Core repository tree, commit, and reference operations for ugit."""
+"""Core repository tree, commit, and reference operations for ugit.
+Handles the higher-level concepts built on top of data.py."""
 
 import itertools
 import operator
@@ -8,6 +9,10 @@ import string
 from collections import namedtuple, deque
 from . import data
 from pathlib import Path
+
+def init():
+    data.init()
+    data.update_ref('HEAD', data.RefValue(symbolic=True, value=os.path.join('refs', 'heads', 'master')))
 
 def write_tree(directory='.'):
     """returns an OID"""
@@ -100,11 +105,18 @@ def commit(message):
 
     return oid
 
-def checkout(oid):
+def checkout(name):
     """Replace the working tree with the snapshot referenced by a commit OID."""
+    oid = get_oid(name)
     commit = get_commit(oid)
     read_tree(commit.tree)
-    data.update_ref('HEAD', data.RefValue(symbolic=False, value=oid))
+    
+    if is_branch(name):
+        HEAD = data.RefValue(symbolic=True, value=os.path.join('refs', 'heads', name))
+    else:
+        HEAD = data.RefValue(symbolic=False, value=oid)
+
+    data.update_ref('HEAD', HEAD, deref=False)
 
 def create_tag(name, oid):
     """Create or update a tag reference for the given object ID."""
@@ -113,6 +125,9 @@ def create_tag(name, oid):
 
 def create_branch(name, oid):
     data.update_ref(os.path.join('refs', 'heads', name), data.RefValue(symbolic=False, value=oid))
+
+def is_branch(branch):
+    return data.get_ref(os.path.join('refs', 'heads', branch)).value is not None
 
 Commit = namedtuple('Commit', ['tree', 'parent', 'message'])
 

@@ -54,7 +54,7 @@ def parse_args():
 
     checkout_parser = commands.add_parser('checkout')
     checkout_parser.set_defaults(func=checkout)
-    checkout_parser.add_argument('oid', default='@', type=oid)
+    checkout_parser.add_argument('commit')
 
     tag_parser = commands.add_parser('tag')
     tag_parser.set_defaults(func=tag)
@@ -73,7 +73,7 @@ def parse_args():
 
 def init(args):
     """Creates a new empty repo"""
-    data.init()
+    base.init()
     repo_path = os.path.join(os.getcwd(), data.GIT_DIR)
     print(f'Intialised empty ugit repository in {repo_path}')
 
@@ -110,7 +110,7 @@ def log(args):
 
 def checkout(args):
     """Check out the requested commit into the working tree."""
-    base.checkout(args.oid)
+    base.checkout(args.commit)
 
 def tag(args):
     """Create a tag pointing at the requested or current OID."""
