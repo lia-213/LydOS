@@ -51,7 +51,7 @@ def _get_ref_internal(ref, deref):
     
     return ref, RefValue(symbolic=symbolic, value=value)
 
-def iter_refs(deref=True):
+def iter_refs(prefix='', deref=True):
     """Yield all known references together with their resolved OIDs."""
     refs = ['HEAD']
     for root, _, filenames in os.walk(os.path.join(GIT_DIR, 'refs')):
@@ -59,6 +59,8 @@ def iter_refs(deref=True):
         refs.extend(os.path.join(root, name) for name in filenames)
 
     for refname in refs:
+        if not refname.startswith(prefix):
+            continue
         yield refname, get_ref(refname, deref=deref)
 
 
