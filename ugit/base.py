@@ -62,6 +62,20 @@ def get_tree(oid, base_path=''):
             raise ValueError(f'Unknown tree entry {type_}')
     return result
 
+def get_working_tree():
+    """Scan the current directory and map every (un)tracked file path
+    to its current blob hash (OID) on disk without actually saving the
+    files to .ugit permanently."""
+    result = {} # file_path:file_oid
+    for root, _, filenames in os.walk('.'):
+        for filename in filenames:
+            path = os.path.relpath(os.path.join(root, filename))
+            if is_ignored(path) or not os.path.isfile(path):
+                continue
+            with open(path, 'rb') as f:
+                result[path] = data.hash_object(f.read()) # result['src/main.py'] = [{oid}]
+    return result
+
 def _empty_current_directory():
     """Remove empty directories from the current tree while preserving ignored paths."""
     for root, dirnames, filenames in os.walk('.', topdown=False):
@@ -120,7 +134,7 @@ def checkout(name):
 
 def reset(oid):
     data.update_ref('HEAD', data.RefValue(symbolic=False, value=oid))
-    
+
 def create_tag(name, oid):
     """Create or update a tag reference for the given object ID."""
     oid = oid or data.get_ref('HEAD')
