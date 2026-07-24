@@ -11,6 +11,7 @@ import webbrowser
 
 from . import data
 from . import base
+from . import diff
 
 def main():
     """Parse command-line arguments and run the selected subcommand."""
@@ -130,7 +131,15 @@ def show(args):
     if not args.oid:
         return
     commit = base.get_commit(args.oid)
+    parent_tree = None
+    if commit.parent:
+        parent_tree = base.get_commit(commit.parent).tree
+
     _print_commit(args.oid, commit)
+    result = diff.diff_trees(
+        base.get_tree(parent_tree), base.get_tree(commit.tree))
+    sys.stdout.flush()
+    sys.stdout.buffer.write(result)
 
 def checkout(args):
     """Check out the requested commit into the working tree."""
