@@ -78,7 +78,7 @@ def parse_args():
     status_parser.set_defaults(func=status)
 
     reset_parser = commands.add_parser('reset')
-    reset_parser.set_default(func=reset)
+    reset_parser.set_defaults(func=reset)
     reset_parser.add_argument('commit', type=oid)
 
     return parser.parse_args()
