@@ -138,8 +138,8 @@ def show(args):
     _print_commit(args.oid, commit)
     result = diff.diff_trees(
         base.get_tree(parent_tree), base.get_tree(commit.tree))
-    sys.stdout.flush()
-    sys.stdout.buffer.write(result)
+
+    print(result)
 
 def checkout(args):
     """Check out the requested commit into the working tree."""

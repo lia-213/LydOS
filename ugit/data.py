@@ -39,9 +39,14 @@ def get_ref(ref, deref=True):
 def _get_ref_internal(ref, deref):
     """Helper Function: Read a reference file and return its stored OID, if it exists."""
     ref_path = os.path.join(GIT_DIR, ref)
-    if os.path.isfile(ref_path):
-        with open(ref_path) as f:
-            value = f.read().strip()
+
+    # 1. Return early if the reference file doesn't exist
+    if not os.path.isfile(ref_path):
+        return ref, RefValue(symbolic=False, value=None)
+
+    # 2. Read file content safely
+    with open(ref_path) as f:
+        value = f.read().strip()
 
     symbolic = bool(value) and value.startswith('ref:')
     if symbolic:
