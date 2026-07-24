@@ -15,6 +15,8 @@ def compare_trees(*trees):
         yield(path, *oids)
 
 def iter_changed_files(t_from, t_to):
+    """Generator function that takes two tree objects 
+    (e.g. HEAD_tree as t_from, working_tree as t_to)"""
     for path, o_from, o_to in compare_trees(t_from, t_to):
         if o_from != o_to:
             action = ('new file' if not o_from else
