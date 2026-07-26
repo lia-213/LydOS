@@ -102,22 +102,34 @@ def _empty_current_directory():
                 # deletion might fail if the directory contains ignored files, so it's ok :)
                 pass
 
-def read_tree(tree_oid):
+def read_tree(tree_oid, update_working=False):
     """uses get_tree to get the file OIDs and writes them into the working dir.
     Mimics git checkout <old-commit hash>, which never deletes brand-new, untracked files. It instead leaves them alone precisely so I don't accidentally lose hours of uncommitted work just becuase I wanted to look at an old snapshot."""
-    _empty_current_directory()
-    for path, oid in get_tree(tree_oid, base_path='./').items():
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, 'wb') as f:
-            f.write(data.get_object(oid))
+    with data.get_index() as index:
+        index.clear()
+        index.update(get_tree(tree_oid))
 
-def read_tree_merged(t_base, t_HEAD, t_other):
+        if update_working:
+            _checkout_index(index)
+
+def read_tree_merged(t_base, t_HEAD, t_other, update_working=False):
+    with data.get_index() as index:
+        index.clear()
+        index.update(diff.merge_trees(
+            get_tree(t_base),
+            get_tree(t_HEAD), 
+            get_tree(t_other)
+        ))
+
+        if update_working:
+            _checkout_index(index)
+
+def _checkout_index(index):
     _empty_current_directory()
-    for path, blob in diff.merge_trees(
-        get_tree(t_base), get_tree(t_HEAD), get_tree(t_other)).items():
-        os.makedirs(os.path.join('.', os.path.dirname(path)), exist_ok=True)
+    for path, oid in index.items():
+        os.makedirs(os.path.dirname(os.path.join('.', path)), exist_ok=True)
         with open(path, 'wb') as f:
-            f.write(blob)
+            f.write(data.get_object(oid, 'blob'))
 
 def commit(message):
     """Create a commit object for the current tree and move HEAD to it."""
@@ -144,7 +156,7 @@ def checkout(name):
     """Replace the working tree with the snapshot referenced by a commit OID."""
     oid = get_oid(name)
     commit = get_commit(oid)
-    read_tree(commit.tree)
+    read_tree(commit.tree, update_working=True)
     
     if is_branch(name):
         HEAD = data.RefValue(symbolic=True, value=os.path.join('refs', 'heads', name))
@@ -164,7 +176,7 @@ def merge(other):
 
     # Handle fast-forward merge
     if merge_base == HEAD:
-        read_tree(c_other.tree)
+        read_tree(c_other.tree, update_working=True)
         data.update_ref('HEAD',
                         data.RefValue(symbolic=False, value=other))
         print('Fast-forward merge, no need to commit')
@@ -174,7 +186,7 @@ def merge(other):
 
     c_base = get_commit(merge_base)
     c_HEAD = get_commit(HEAD)
-    read_tree_merged(c_base.tree, c_HEAD.tree, c_other.tree)
+    read_tree_merged(c_base.tree, c_HEAD.tree, c_other.tree, update_working=True)
     print('Merged in working tree\nPlease commit')
 
 def get_merge_base(oid1, oid2):
