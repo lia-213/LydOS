@@ -307,7 +307,7 @@ def _diff(args):
         tree_from = base.get_tree(oid and base.get_commit(oid).tree)
 
     if args.cached:
-        tree-to = base.get_index_tree()
+        tree_to = base.get_index_tree()
         if not args.commit:
             # If no commit was provided, diff from HEAD
             oid = base.get_oid('@')
