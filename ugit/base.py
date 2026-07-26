@@ -224,21 +224,49 @@ def get_commit(oid):
 
 def iter_commits_and_parents(oids):
     """generator that returns all commits that it can reach from a given set of OIDs"""
-    oids = deque(oids)
-    visited = set()
+    # N.B. must yield the oid before accessing it (to allow caller to fetch it if needed)
+    # modified BFS with double ended queue so the main-line history is prioritised
+    oids = deque(oids) # converts input list of starting commit hashes into a collections.deque so items can be efficiently popped and pushed from both the left and right ends
+    visited = set() # keeps track of commit OIDs we have already processed to prevent infinite loops when encountering merge commits or duplicate paths
 
     while oids:
-        oid = oids.popleft()
-        if not oid or oid in visited:
+        oid = oids.popleft() # takes next commit hash from the left side of the queue
+        if not oid or oid in visited: # skips None values or commit hashes alr processed
             continue
+        # marks the commit as visited and yields its hash before attempting to fetch its data
         visited.add(oid)
-        yield oid
+        yield oid # yielding first lets callers pull or download the object dynamically before get_commit(oid) tries to parse it
 
-        commit = get_commit(oid)
+        commit = get_commit(oid) # retrieves and pares the commit object from the database to extract its parent references
         # Return first parent next
-        oids.extendleft(commit.parents[:1])
+        oids.extendleft(commit.parents[:1]) # pushes the first parent (the main lineage) to the left of the queue so it gets processed next on the very next iteration
         # Return other parents later
-        oids.extend(commit.parents[1:])
+        oids.extend(commit.parents[1:]) # pushes any additional parents (from merge commits) to the right of the queue so they get processed later
+
+def iter_objects_in_commits(oids):
+    # N.B. Must yield the oid before accessing it (to allow caller to fetch it if needed)
+    """yields every single object inside commit objects, including all tree directories and file blobs
+    --- this is how Git knows every object needed to package a commit for transfer.
+    Note: before accessing an OID, we yield it, to give the caller a chance to fetch it if it is missing."""
+    visited = set() # tracks all object hashes (commits, trees and blobs) to ensure each unique object is onlly yielded once
+    def iter_objects_in_tree(oid): # recursive generator (inner helper) that deeply walks directory trees
+        visited.add(oid)
+        yield oid # yields the tree object itself and marks it visited
+        for type_, oid, _ in _iter_tree_entries(oid): # iterates through every entry inside the tree
+            if oid not in visited:
+                # if the entry is a sub-directory tree, it recursively yields all objects inside that tree
+                if type_ == 'tree':
+                    yield from iter_objects_in_tree(oid)
+                else:
+                    visited.add(oid) # if it's a file blob, it marks the blob visited and yields its OID
+                    yield oid
+
+    # calls iter_commits_and_parents(oids) to iterate through every commit reachable from the initial oids
+    for oid in iter_commits_and_parents(oids):
+        yield oid # yields commit oid
+        commit = get_commit(oid)
+        if commit.tree not in visited: # gets the root tree oid of that commit and if tree not yet visited, ...
+            yield from iter_objects_in_tree(commit.tree) # streams all sub-trees and file blobs belonging to that commit snapshot
 
 def get_oid(name):
     """Resolve a ref name, tag, branch, or raw object ID into an OID."""
