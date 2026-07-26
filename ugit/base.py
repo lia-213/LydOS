@@ -159,6 +159,13 @@ def merge(other):
     read_tree_merged(c_HEAD.tree, c_other.tree)
     print('Merged in working tree\nPlease commit')
 
+def get_merge_base(oid1, oid2):
+    parents1 = set(iter_commits_and_parents({oid1}))
+
+    for oid in iter_commits_and_parents({oid2}):
+        if oid in parents1:
+            return oid
+        
 def create_tag(name, oid):
     """Create or update a tag reference for the given object ID."""
     oid = oid or data.get_ref('HEAD')
