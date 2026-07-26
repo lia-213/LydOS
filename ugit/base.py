@@ -15,28 +15,35 @@ def init():
     data.init()
     data.update_ref('HEAD', data.RefValue(symbolic=True, value=os.path.join('refs', 'heads', 'master')))
 
-def write_tree(directory='.'):
-    """returns an OID"""
-    entries = []
-    with os.scandir(directory) as it:
-        for entry in it:
-            full = os.path.join(directory, entry.name)
+def write_tree():
+    """Index is flat, we need it as a tree of dicts"""
+    index_as_tree = {}
+    with data.get_index() as index:
+        for path, oid in index.items():
+            dirpath, filename = os.path.split(path)
 
-            if is_ignored(full):
-                continue
+            current = index_as_tree
+            # Find the dict for the directory of this file
+            for dirname in dirpath:
+                current = current.setdefault(dirname, {})
+            current[filename] = oid
 
-            if entry.is_file(follow_symlinks=False):
-                type_ = 'blob'
-                with open(full, 'rb') as f:
-                    oid = data.hash_object(f.read())
-            elif entry.is_dir(follow_symlinks=False):
+    def write_tree_recursive(tree_dict):
+        entries = []
+        for name, value in tree_dict.items():
+            if type(value) is dict:
                 type_ = 'tree'
-                oid = write_tree(full)
-            entries.append((entry.name, oid, type_))
+                oid = write_tree_recursive(value)
+            else:
+                type_ = 'blob'
+                oid = value
+            entries.append((name, oid, type_))
 
-    tree = ''.join(f'{type_} {oid} {name}\n'
-                   for name, oid, type_ in sorted(entries))
-    return data.hash_object(tree.encode(), 'tree')
+        tree = ''.join(f'{type_} {oid} {name}\n'
+                       for name, oid, type_ in sorted(entries))
+        return data.hash_object(tree.encode(), 'tree')
+
+    return write_tree_recursive(index_as_tree)
 
 def _iter_tree_entries(oid):
     """a generator that will take an OID of a tree, tokenise it line-by-line and yield the raw string values"""
