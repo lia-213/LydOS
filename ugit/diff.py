@@ -51,8 +51,11 @@ def diff_trees(t_from, t_to):
 def diff_blobs(o_from, o_to, path='a/file'):
     """Compares two blob contents and returns a unified diff string."""
     # Get text from object database (or empty list if file didn't exist)
-    from_lines = data.get_object(o_from).decode().splitlines(keepends=True) if o_from else []
-    to_lines = data.get_object(o_to).decode().splitlines(keepends=True) if o_to else []
+    try:
+        from_lines = data.get_object(o_from).decode('utf-8').splitlines(keepends=True) if o_from else []
+        to_lines = data.get_object(o_to).decode('utf-8').splitlines(keepends=True) if o_to else []
+    except UnicodeDecodeError:
+        return f'Binary files a/{path} and b/{path} differ\n'
 
     # Generate unified diff lines
     diff = difflib.unified_diff(

@@ -13,7 +13,7 @@ from pathlib import Path
 
 def init():
     data.init()
-    data.update_ref('HEAD', data.RefValue(symbolic=True, value=os.path.join('refs', 'heads', 'master')))
+    data.update_ref('HEAD', data.RefValue(symbolic=True, value=os.path.join('refs', 'heads', 'master')), deref=False)
 
 def write_tree():
     """Index is flat, we need it as a tree of dicts"""
@@ -110,14 +110,16 @@ def read_tree(tree_oid, update_working=False):
     """uses get_tree to get the file OIDs and writes them into the working dir.
     Mimics git checkout <old-commit hash>, which never deletes brand-new, untracked files. It instead leaves them alone precisely so I don't accidentally lose hours of uncommitted work just becuase I wanted to look at an old snapshot."""
     with data.get_index() as index:
+        old_index = dict(index)
         index.clear()
         index.update(get_tree(tree_oid))
 
         if update_working:
-            _checkout_index(index)
+            _checkout_index(index, old_index)
 
 def read_tree_merged(t_base, t_HEAD, t_other, update_working=False):
     with data.get_index() as index:
+        old_index = dict(index)
         index.clear()
         index.update(diff.merge_trees(
             get_tree(t_base),
@@ -126,9 +128,15 @@ def read_tree_merged(t_base, t_HEAD, t_other, update_working=False):
         ))
 
         if update_working:
-            _checkout_index(index)
+            _checkout_index(index, old_index)
 
-def _checkout_index(index):
+def _checkout_index(index, old_index=None):
+    old_index = old_index or {}
+
+    for path in old_index:
+        if path not in index and os.path.exists(path):
+            os.remove(path)
+
     _empty_current_directory()
     for path, oid in index.items():
         os.makedirs(os.path.dirname(os.path.join('.', path)), exist_ok=True)

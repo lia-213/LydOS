@@ -49,13 +49,16 @@ RefValue = namedtuple('RefValue', ['symbolic', 'value'])
 
 def update_ref(ref, value, deref=True):
     """Write an OID into a named reference under the ugit directory."""
-    if value.symbolic:
-        raise ValueError(f"Expected a concrete value, but got symbolic value: {value}")
+
     ref = _get_ref_internal(ref, deref)[0]
     ref_path = os.path.join(GIT_DIR, ref)
     os.makedirs(os.path.dirname(ref_path), exist_ok=True)
+
     with open(ref_path, 'w') as f:
-        f.write(value.value)
+        if value.symbolic:
+            f.write(f'ref: {value.value}')
+        else:
+            f.write(value.value)
 
 def get_ref(ref, deref=True):
     return _get_ref_internal(ref, deref)[1]
@@ -64,12 +67,16 @@ def delete_ref(ref, deref=True):
     ref = _get_ref_internal(ref, deref)[0]
     os.remote(os.path.join(GIT_DIR, ref))
 
-def _get_ref_internal(ref, deref):
+def _get_ref_internal(ref, deref, seen=None):
     """Helper Function: Read a reference file and return its stored OID, if it exists."""
+    seen = seen or set()
     ref_path = os.path.join(GIT_DIR, ref)
 
     # 1. Return early if the reference file doesn't exist
     if not os.path.isfile(ref_path):
+        return ref, RefValue(symbolic=False, value=None)
+
+    if ref in seen:
         return ref, RefValue(symbolic=False, value=None)
 
     # 2. Read file content safely
@@ -80,7 +87,7 @@ def _get_ref_internal(ref, deref):
     if symbolic:
         value = value.split(':', 1)[1].strip()
         if deref:
-            return _get_ref_internal(value, deref=True)
+            return _get_ref_internal(value, deref=True, seen=seen | {ref})
     
     return ref, RefValue(symbolic=symbolic, value=value)
 
