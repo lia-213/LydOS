@@ -2,6 +2,7 @@
 Handles everything that directly touches the disk (object database and refs)."""
 
 import hashlib
+import json
 import os
 import shutil
 
@@ -93,7 +94,20 @@ def iter_refs(prefix='', deref=True):
     for refname in refs:
         if not refname.startswith(prefix):
             continue
-        yield refname, get_ref(refname, deref=deref)
+        ref = get_ref(refname, deref=deref)
+        yield refname, ref
+
+@contextmanager
+def get_index():
+    index = {}
+    if os.path.isfile(os.path.join(GIT_DIR, 'index')):
+        with open(os.path.join(GIT_DIR, 'index')) as f:
+            index = json.load(f)
+
+    yield index
+
+    with open(os.path.join(GIT_DIR, 'index'), 'w') as f:
+        json.dump(index, f)
 
 
 def hash_object(data, type_='blob'):
@@ -139,3 +153,5 @@ def push_object(oid, remote_git_dir):
     remote_git_dir = os.path.join(remote_git_dir, '.ugit')
     shutil.copy(os.path.join(GIT_DIR, 'objects', oid),
                 os.path.join(remote_git_dir, 'objects', oid))
+
+    

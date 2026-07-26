@@ -296,6 +296,30 @@ def get_oid(name):
         
     raise ValueError(f'unknown name {name}')
 
+def add(filenames):
+    def add_file(filename):
+        # Normalise path
+        filename = os.path.relpath(filename)
+        with open(filename, 'rb') as f:
+            oid = data.hash_object(f.read())
+        index[filename] = oid
+
+    def add_directory(dirname):
+        for root, _, filenames in os.walk(dirname):
+            for filename in filenames:
+                # Normalise path
+                path = os.path.relpath(os.path.join(root, filename))
+                if is_ignored(path) or not os.path.isfile(path):
+                    continue
+                add_file(path)
+
+    with data.get_index() as index:
+        for name in filenames:
+            if os.path.isfile(name):
+                add_file(name)
+            elif os.path.isdir(name):
+                add_directory(name)
+
 def is_ignored(path):
     """Return True when a path belongs to ugit internals or the local virtualenv."""
     parts = Path(path).parts
