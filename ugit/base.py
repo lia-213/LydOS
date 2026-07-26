@@ -84,6 +84,10 @@ def get_working_tree():
                 result[path] = data.hash_object(f.read()) # result['src/main.py'] = [{oid}]
     return result
 
+def get_index_tree():
+    with data.get_index() as index:
+        return index
+
 def _empty_current_directory():
     """Remove empty directories from the current tree while preserving ignored paths."""
     for root, dirnames, filenames in os.walk('.', topdown=False):
