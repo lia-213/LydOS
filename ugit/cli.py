@@ -100,6 +100,11 @@ def parse_args():
     fetch_parser.set_defaults(func=fetch)
     fetch_parser.add_argument('remote')
 
+    push_parser = commands.add_parser('push')
+    push_parser.set_defaults(func=push)
+    push_parser.add_argument('remote')
+    push_parser.add_argument('branch')
+
     return parser.parse_args()
 
 def init(args):
@@ -272,7 +277,7 @@ def merge_base(args):
 
 def fetch(args):
     remote.fetch(args.remote)
-    
+
 def _diff(args):
     tree = args.commit and base.get_commit(args.commit).tree
 
