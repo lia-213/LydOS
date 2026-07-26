@@ -176,7 +176,11 @@ def get_merge_base(oid1, oid2):
     for oid in iter_commits_and_parents({oid2}):
         if oid in parents1:
             return oid
-        
+
+def is_ancestor_of(commit, maybe_ancestor):
+    """Returns True if maybe_ancestor exists within the commit history of the commit."""
+    return maybe_ancestor in iter_commits_and_parents({commit}) 
+   
 def create_tag(name, oid):
     """Create or update a tag reference for the given object ID."""
     oid = oid or data.get_ref('HEAD')

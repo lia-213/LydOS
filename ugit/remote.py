@@ -23,13 +23,29 @@ def fetch(remote_path):
 
 def push(remote_path, refname):
     # Get refs data
+    remote_refs = _get_remote_refs(remote_path)
+    remote_ref = remote_refs.get(refname)
     local_ref = data.get_ref(refname).value # resolve the local reference - reading it to see what oid (commit hash) it currently points to, unwrapping the RefValue object to get the raw hash string with .value
 
-    if not local_ref: raise ValueError(f"Reference '{refname}' doesn't exist locally.") # ensures the refernce (e.g. refs/heads/main) actually exists in local repo before proceeding; if it doesn't, execution stops immediately
+    if not local_ref: raise ValueError(f"Cannot push: reference '{refname}' doesn't exist locally.") # ensures the refernce (e.g. refs/heads/main) actually exists in local repo before proceeding; if it doesn't, execution stops immediately
 
-    objects_to_push = base.iter_objects_in_commits({local_ref}) #starting from local_ref, it walks backwards through the commit graph and yields every single required oid (inc. parent commits, tree directories and file blobs) needed to fully represent the history up to local ref
+    if remote_ref and not base.is_ancestor_of(local_ref, remote_ref): raise ValueError(f"Cannot push to '{refname}' on remote: "
+                                                                                       "Updates were rejected because the remote commit is not an ancestor of your local commit. "
+                                                                                       "(Force push disabled)")
 
-    # Push all objects
+    # Computing which objects the server doesn't have so no need to redownload
+    # filter(function, iterable): function -> predicate function (data.object_exists) that takes one item and returns True or False, iterable -> an iterable collection (remote_refs.values(); the list/dict of values we want to test)
+    known_remote_refs = filter(data.object_exists, remote_refs.values())
+    """
+    Functionally equivalent:
+    known_remote_refs = [
+        oid for oid in remote_refs.values() if data.object_exists(oid)]
+    """
+    remote_objects = set(base.iter_objects_in_commits(known_remote_refs)) # iter_objects_in_commits only streams new/missing commits down from the remote
+    local_objects = set(base.iter_objects_in_commits({local_ref})) # starting from local_ref, it walks backwards through the commit graph and yields every single required oid (inc. parent commits, tree directories and file blobs) needed to fully represent the history up to local ref
+    objects_to_push = local_objects - remote_objects
+
+    # Push missing objects
     for oid in objects_to_push:
         data.push_object(oid, remote_path) # copies the actual binary object file (from .ugit/objects/<oid>) over to the destination repository's object store (<remote_path>/.ugit/objects/<oid>)
 
