@@ -85,6 +85,10 @@ def parse_args():
     reset_parser.set_defaults(func=reset)
     reset_parser.add_argument('commit', type=oid)
 
+    merge_parser = commands.add_parser('merge')
+    merge_parser.set_defaults(func=merge)
+    merge_parser.add_argument('merge', type=oid)
+
     return parser.parse_args()
 
 def init(args):
@@ -136,8 +140,8 @@ def show(args):
         return
     commit = base.get_commit(args.oid)
     parent_tree = None
-    if commit.parent:
-        parent_tree = base.get_commit(commit.parent).tree
+    if commit.parents:
+        parent_tree = base.get_commit(commit.parents[0]).tree
 
     _print_commit(args.oid, commit)
     result = diff.diff_trees(
@@ -184,8 +188,8 @@ def k(args):
         for oid in base.iter_commits_and_parents(oids):
             commit = base.get_commit(oid)
             dot += f'"{oid}" [shape=box style=filled label="{oid[:10]}"]\n'
-            if commit.parent:
-                dot += f'"{oid}" -> "{commit.parent}"\n'
+            for parent in commit.parents:
+                dot += f'"{oid}" -> "{parent}"\n'
 
         dot += '}\n'
 
@@ -241,9 +245,12 @@ def status(args):
 
     for path, action in diff.iter_changed_files(base.get_tree(HEAD_tree), base.get_working_tree()):
         print(f'{action:>12}: {path}')
-        
+
 def reset(args):
     base.reset(args.commit)
+
+def merge(args):
+    base.merge(args.commit)
 
 def _diff(args):
     tree = args.commit and base.get_commit(args.commit).tree

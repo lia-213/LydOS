@@ -8,6 +8,7 @@ import string
 
 from collections import namedtuple, deque
 from . import data
+from . import diff
 from pathlib import Path
 
 def init():
@@ -103,6 +104,13 @@ def read_tree(tree_oid):
         with open(path, 'wb') as f:
             f.write(data.get_object(oid))
 
+def read_tree_merged(t_HEAD, t_other):
+    _empty_current_directory()
+    for path, blob in diff.merge_trees(get_tree(t_HEAD), get_tree(t_other)).items():
+        os.makedirs(os.path.join('.', os.path.dirname(path)), exist_ok=True)
+        with open(path, 'wb') as f:
+            f.write(blob)
+
 def commit(message):
     """Create a commit object for the current tree and move HEAD to it."""
     commit = f'tree {write_tree()}\n'
@@ -135,6 +143,15 @@ def checkout(name):
 def reset(oid):
     data.update_ref('HEAD', data.RefValue(symbolic=False, value=oid))
 
+def merge(other):
+    HEAD = data.get_ref('HEAD').value
+    assert HEAD
+    c_HEAD = get_commit(HEAD)
+    c_other = get_commit(other)
+
+    read_tree_merged(c_HEAD.tree, c_other.tree)
+    print('Merged in working tree')
+
 def create_tag(name, oid):
     """Create or update a tag reference for the given object ID."""
     oid = oid or data.get_ref('HEAD')
@@ -159,11 +176,11 @@ def get_branch_name():
     if HEAD.startswith(os.path.join('refs', 'heads')):
         return os.path.relpath(HEAD, os.path.join('refs', 'heads'))
     
-Commit = namedtuple('Commit', ['tree', 'parent', 'message'])
+Commit = namedtuple('Commit', ['tree', 'parents', 'message'])
 
 def get_commit(oid):
     """Parse a commit object into its tree, parent, and message fields."""
-    parent = None
+    parents = []
     
     commit = data.get_object(oid, 'commit').decode()
     lines = iter(commit.splitlines())
@@ -173,12 +190,12 @@ def get_commit(oid):
         if key == 'tree':
             tree = value
         elif key == 'parent':
-            parent = value
+            parents.append(value)
         else: assert False, f'Unknown field {key}'
 
     message = '\n'.join(lines)
 
-    return Commit(tree=tree, parent=parent, message=message)
+    return Commit(tree=tree, parents=parents, message=message)
 
 def iter_commits_and_parents(oids):
     """generator that returns all commits that it can reach from a given set of OIDs"""
@@ -193,8 +210,11 @@ def iter_commits_and_parents(oids):
         yield oid
 
         commit = get_commit(oid)
-        oids.appendleft(commit.parent)
-
+        # Return first parent next
+        oids.extendleft(commit.parents[:1])
+        # Return other parents later
+        oids.extend(commit.parents[1:])
+        
 def get_oid(name):
     """Resolve a ref name, tag, branch, or raw object ID into an OID."""
 
