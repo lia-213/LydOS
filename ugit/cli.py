@@ -15,8 +15,9 @@ from . import diff
 
 def main():
     """Parse command-line arguments and run the selected subcommand."""
-    args = parse_args()
-    args.func(args)
+    with data.change_git_dir('.'):
+        args = parse_args()
+        args.func(args)
 
 def parse_args():
     """Build the argument parser and return the parsed command namespace."""

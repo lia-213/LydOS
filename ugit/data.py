@@ -5,8 +5,30 @@ import hashlib
 import os
 
 from collections import namedtuple
+from contextlib import contextmanager
 
-GIT_DIR = '.ugit'
+# Will be initialised in cli.main()
+""" establishes a module-level global var. that tracks where ugit looks for
+repository data (like .ugit/objects, .ugit/refs, etc.)"""
+GIT_DIR = None
+
+"""Context manager designed to temporarily swap out the location of the 
+.ugit directory (like running a command in a different git repository or
+temporary repo) and then automatically restore it back to what is was 
+when the task is done."""
+"""context managers turn a simple generator function into smth you can use 
+with a with block - instead of writing a full class with __enter__ and __exit__
+methods, @contextmanager elts you write a single function
+---- everything before "yield" runs when entering the "with" block
+---- everything after "yield" runs when exiting the with block"""
+
+@contextmanager
+def change_git_dir(new_dir):
+    global GIT_DIR # "global" - modifications inside this context manager function should update the module's top-level GIT_DIR variable, rather than crating a temporary local variable with the same name
+    old_dir = GIT_DIR # saves current repo path before making any changes, acting as a bookmark so it knows where to return to later
+    GIT_DIR = os.path.join(new_dir, '.ugit') # switches GIT_DIR to point to the .ugit folder inside new_dir
+    yield # where the execution (in the context manager) pauses and control is handed over to whatever code is inside the with block
+    GIT_DIR = old_dir # once the code inside the "with" block finishes executing (or raises an exception), Python jumps back here to restore GIT_DIR to its og path
 
 
 def init():
