@@ -36,6 +36,10 @@ def update_ref(ref, value, deref=True):
 def get_ref(ref, deref=True):
     return _get_ref_internal(ref, deref)[1]
 
+def delete_ref(ref, deref=True):
+    ref = _get_ref_internal(ref, deref)[0]
+    os.remote(os.path.join(GIT_DIR, ref))
+
 def _get_ref_internal(ref, deref):
     """Helper Function: Read a reference file and return its stored OID, if it exists."""
     ref_path = os.path.join(GIT_DIR, ref)
