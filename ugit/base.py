@@ -1,5 +1,6 @@
 """Core repository tree, commit, and reference operations for ugit.
-Handles the higher-level concepts built on top of data.py."""
+Handles the higher-level concepts built on top of data.py.
+This is base.py"""
 
 import itertools
 import operator
@@ -81,7 +82,8 @@ def get_working_tree():
             if is_ignored(path) or not os.path.isfile(path):
                 continue
             with open(path, 'rb') as f:
-                result[path] = data.hash_object(f.read()) # result['src/main.py'] = [{oid}]
+                # result['src/main.py'] = [{oid}]
+                result[path] = data.hash_object(f.read()) 
     return result
 
 def get_index_tree():
@@ -95,6 +97,7 @@ def _empty_current_directory():
             path = os.path.relpath(os.path.join(root, filename))
             if is_ignored(path) or not os.path.isfile(path):
                 continue
+            os.remove(path)
         for dirname in dirnames:
             path = os.path.relpath(os.path.join(root, dirname))
             if is_ignored(path):
@@ -328,6 +331,9 @@ def get_oid(name):
     raise ValueError(f'unknown name {name}')
 
 def add(filenames):
+    # TODO: add "ugit add ." functionality
+    # if not filenames:
+        
     def add_file(filename):
         # Normalise path
         filename = os.path.relpath(filename)
