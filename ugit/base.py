@@ -25,8 +25,9 @@ def write_tree():
 
             current = index_as_tree
             # Find the dict for the directory of this file
-            for dirname in dirpath:
-                current = current.setdefault(dirname, {})
+            if dirpath:
+                for dirname in dirpath.split(os.sep):
+                    current = current.setdefault(dirname, {})
             current[filename] = oid
 
     def write_tree_recursive(tree_dict):
@@ -136,13 +137,14 @@ def read_tree_merged(t_base, t_HEAD, t_other, update_working=False):
 def _checkout_index(index, old_index=None):
     old_index = old_index or {}
 
+    # Remove files that were tracked before but aren't in the new tree
     for path in old_index:
         if path not in index and os.path.exists(path):
             os.remove(path)
 
-    _empty_current_directory()
+    # Write/update files that are in the new tree
     for path, oid in index.items():
-        os.makedirs(os.path.dirname(os.path.join('.', path)), exist_ok=True)
+        os.makedirs(os.path.dirname(os.path.join('.', path)) or '.', exist_ok=True)
         with open(path, 'wb') as f:
             f.write(data.get_object(oid, 'blob'))
 
