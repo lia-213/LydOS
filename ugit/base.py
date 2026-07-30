@@ -333,9 +333,7 @@ def get_oid(name):
     raise ValueError(f'unknown name {name}')
 
 def add(filenames):
-    # TODO: add "ugit add ." functionality
-    # if not filenames:
-        
+
     def add_file(filename):
         # Normalise path
         filename = os.path.relpath(filename)
