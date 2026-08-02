@@ -83,13 +83,12 @@ def merge_blobs(o_base, o_HEAD, o_other):
                 f.flush()
 
         with subprocess.Popen(
-            ['diff3', 'm'
-             '-L', 'HEAD', f_HEAD.name,
-             '-L', 'BASE', f_base.name,
-             '-L', 'MERGE_HEAD', f_other.name
-             ], stdout=subprocess.PIPE) as proc:
-             output, _ = proc.communicate()
-             if proc.returncode not in (0, 1):
+            ['diff3', '-m',
+            '-L', 'HEAD', '-L', 'BASE', '-L', 'MERGE_HEAD',
+            f_HEAD.name, f_base.name, f_other.name
+            ], stdout=subprocess.PIPE) as proc:
+            output, _ = proc.communicate()
+            if proc.returncode not in (0, 1):
                 raise RuntimeError(f"'diff3' failed with return code {proc.returncode}")
 
         return output
