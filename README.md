@@ -34,7 +34,7 @@ them (e.g. before `.\00-run-all.ps1`).
 
 pip install -r requirements-dev.txt
 python -m unittest discover -s tests -v
-# or, if using pytest:
+### or, if using pytest:
 pytest tests/ -v
 
 ## Repo layout and test workflow
