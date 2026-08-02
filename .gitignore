@@ -4,3 +4,4 @@ __pycache__
 .ugit/
 *.txt
 docs/
+test-*/
