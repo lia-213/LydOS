@@ -65,7 +65,7 @@ def get_ref(ref, deref=True):
 
 def delete_ref(ref, deref=True):
     ref = _get_ref_internal(ref, deref)[0]
-    os.remote(os.path.join(GIT_DIR, ref))
+    os.remove(os.path.join(GIT_DIR, ref))
 
 def _get_ref_internal(ref, deref, seen=None):
     """Helper Function: Read a reference file and return its stored OID, if it exists."""

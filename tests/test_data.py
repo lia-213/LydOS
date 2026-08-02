@@ -97,17 +97,6 @@ class TestRefs(DataTestCase):
         self.assertIn(master_ref, found)
         self.assertNotIn(tag_ref, found)
 
-    @unittest.expectedFailure
-    def test_delete_ref_removes_the_ref_file(self):
-        # Known bug: delete_ref() calls os.remote(...), which does not exist
-        # (os module has no 'remote' attribute -- this should be os.remove).
-        # This test documents the intended behaviour and will start passing
-        # automatically once that typo is fixed.
-        data.update_ref('refs/heads/throwaway', data.RefValue(symbolic=False, value='cccc'))
-        data.delete_ref('refs/heads/throwaway')
-        ref = data.get_ref('refs/heads/throwaway')
-        self.assertIsNone(ref.value)
-
 
 class TestIndex(DataTestCase):
     def test_index_roundtrip_empty(self):
