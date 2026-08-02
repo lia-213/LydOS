@@ -5,6 +5,7 @@ This is base.py"""
 import itertools
 import operator
 import os
+import shutil
 import string
 
 from collections import namedtuple, deque
@@ -198,7 +199,10 @@ def merge(other):
                         data.RefValue(symbolic=False, value=other))
         print('Fast-forward merge, no need to commit')
         return
-    
+
+    if not shutil.which('diff3'):
+        raise RuntimeError("This requires diff3 from GNU diffutils. This isn't a Python package. See README for more details.")
+
     data.update_ref('MERGE_HEAD', data.RefValue(symbolic=False, value=other))
 
     c_base = get_commit(merge_base)

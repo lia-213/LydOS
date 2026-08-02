@@ -90,7 +90,7 @@ def parse_args():
 
     merge_parser = commands.add_parser('merge')
     merge_parser.set_defaults(func=merge)
-    merge_parser.add_argument('merge', type=oid)
+    merge_parser.add_argument('commit', type=oid)
 
     merge_base_parser = commands.add_parser('merge-base')
     merge_base_parser.set_defaults(func=merge_base)

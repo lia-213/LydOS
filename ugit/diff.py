@@ -5,7 +5,8 @@ from tempfile import NamedTemporaryFile as temp
 
 from . import data
 
-import os
+import os 
+
 from contextlib import contextmanager
 
 @contextmanager
@@ -15,6 +16,7 @@ def Temp():
         try:
             yield f
         finally:
+            f.close()
             if os.path.exists(f.name):
                 os.remove(f.name)
 
