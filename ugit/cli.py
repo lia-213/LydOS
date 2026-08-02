@@ -109,6 +109,7 @@ def parse_args():
     add_parser = commands.add_parser('add')
     add_parser.set_defaults(func=add)
     add_parser.add_argument('files', nargs='+')
+
     return parser.parse_args()
 
 def init(args):
@@ -181,10 +182,9 @@ def tag(args):
 def branch(args):
     if not args.name:
         current = base.get_branch_name()
-        for branch in base.iter_branch_name():
-            for branch in base.iter_branch_names():
-                prefix = '*' if branch == current else ' '
-                print(f'{prefix} {branch}')
+        for branch in base.iter_branch_names():
+            prefix = '*' if branch == current else ' '
+            print(f'{prefix} {branch}')
     else:
         base.create_branch(args.name, args.start_point)
         print(f'Branch {args.name} created at {args.start_point[:10]}')
@@ -320,6 +320,7 @@ def _diff(args):
     
     result = diff.diff_trees(tree_from, tree_to)
 
+    print(result)
     return result
 
 def push(args):

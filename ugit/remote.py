@@ -3,8 +3,8 @@ import os
 from . import base
 from . import data
 
-REMOTE_REFS_BASE = 'refs/heads/'
-LOCAL_REFS_BASE = 'refs/remote/'
+REMOTE_REFS_BASE = os.path.join('refs', 'heads')
+LOCAL_REFS_BASE = os.path.join('refs', 'remote')
 
 def fetch(remote_path):
     """Iterate over all objects and fetch missing ones"""

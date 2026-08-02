@@ -147,6 +147,8 @@ def get_object(oid, expected='blob'):
     return content
 
 def object_exists(oid):
+    if not oid:
+        return False
     return os.path.isfile(os.path.join(GIT_DIR, 'objects', oid))
 
 def fetch_object_if_missing(oid, remote_git_dir):
