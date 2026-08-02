@@ -1,4 +1,4 @@
-# ugit Roadmap: Next Steps
+# ugit Roadmap: My Next Steps
 
 ## Step 1 — Finish ugit (foundations)
 
