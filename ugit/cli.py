@@ -194,57 +194,64 @@ def k(args):
     oids = set()
     for refname, ref in data.iter_refs():
         oids.add(ref.value)
-    
+    # Build DOT graph
+    dot = 'digraph commits {\n'
+
+    # Add refs as note nodes and edges
+    for refname, ref in data.iter_refs(deref=False):
+        dot += f'"{refname}" [shape=note]\n'
+        dot += f'"{refname}" -> "{ref.value}"\n'
+        if not ref.symbolic:
+            oids.add(ref.value)
+
+    # Add commit nodes and parent edges
     for oid in base.iter_commits_and_parents(oids):
-        dot = 'digraph commits {\n'
+        commit = base.get_commit(oid)
+        dot += f'"{oid}" [shape=box style=filled label="{oid[:10]}"]\n'
+        for parent in commit.parents:
+            dot += f'"{oid}" -> "{parent}"\n'
 
-        oids = set()
-        for refname, ref in data.iter_refs(deref=False):
-            dot += f'"{refname}" [shape=note]\n'
-            dot += f'"{refname}" -> "{ref.value}"\n'
-            if not ref.symbolic:
-                oids.add(ref.value)
-        
-        for oid in base.iter_commits_and_parents(oids):
-            commit = base.get_commit(oid)
-            dot += f'"{oid}" [shape=box style=filled label="{oid[:10]}"]\n'
-            for parent in commit.parents:
-                dot += f'"{oid}" -> "{parent}"\n'
+    dot += '}\n'
 
-        dot += '}\n'
+    # Try local Graphviz rendering first
+    if shutil.which('dot'):
+        try:
+            proc = subprocess.Popen(['dot', '-Tpng'], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+            png_data, _ = proc.communicate(dot.encode())
 
-        # 1. check if 'dot' executable exists on system PATH
-        if shutil.which('dot'):
+            # Save PNG to a temporary file and open it in a platform-specific way
+            import tempfile as _temp
+            tmp = _temp.NamedTemporaryFile(delete=False, suffix='.png')
             try:
-                # generate image using Graphviz dot
-                proc = subprocess.Popen(
-                    ['dot, '-Tpng],
-                    stdin=subprocess.PIPE,
-                    stdout=subprocess.PIPE
-                )
-                png_data, _ = proc.communicate(dot.encode())
-
-                # pipe output to macOS Preview app
-                preview_proc = subprocess.Popen(
-                    ['open', '-a', 'Preview.app', '-f'], 
-                    stdin=subprocess.PIPE
-                )
-                preview_proc.communicate(png_data)
+                tmp.write(png_data)
+                tmp.flush()
+                tmp.close()
+                if sys.platform == 'darwin':
+                    subprocess.Popen(['open', tmp.name])
+                elif os.name == 'nt':
+                    os.startfile(tmp.name)
+                else:
+                    if shutil.which('xdg-open'):
+                        subprocess.Popen(['xdg-open', tmp.name])
+                    else:
+                        print(f'Graph image saved to {tmp.name}')
             except Exception as e:
                 print(f'Failed to render locally: {e}')
                 print(dot)
-        else:
-            # 2. fallback: print DOT string and launch online renderer
-            print("Graphviz 'dot' not found on system PATH.")
-            print("--- DOT GRAPH DATA ---")
+        except Exception as e:
+            print(f'Failed to render locally: {e}')
             print(dot)
-            print("----------------------")
+    else:
+        # Fallback: print DOT and open quickchart.io renderer
+        print("Graphviz 'dot' not found on system PATH.")
+        print("--- DOT GRAPH DATA ---")
+        print(dot)
+        print("----------------------")
 
-            # open web visualiser automatically in browser
-            encoded_dot = urllib.parse.quote(dot)
-            url = f"https://quickchart.io/graphviz?graph={encoded_dot}"
-            print(f"Opening graph visually at: {url}")
-            webbrowser.open(url)
+        encoded_dot = urllib.parse.quote(dot)
+        url = f"https://quickchart.io/graphviz?graph={encoded_dot}"
+        print(f"Opening graph visually at: {url}")
+        webbrowser.open(url)
 
 def status(args):
     HEAD = base.get_oid('@')

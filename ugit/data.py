@@ -62,7 +62,6 @@ def update_ref(ref, value, deref=True):
 
 def get_ref(ref, deref=True):
     return _get_ref_internal(ref, deref)[1]
-
 def delete_ref(ref, deref=True):
     ref = _get_ref_internal(ref, deref)[0]
     os.remove(os.path.join(GIT_DIR, ref))

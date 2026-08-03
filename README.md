@@ -36,11 +36,8 @@ on top of it:
   `diff3` for diverged branches
 - **Remotes** — `fetch` and `push` against another `ugit` repo on disk
   (no server, no network protocol — just another local `.ugit` directory)
-- **Graph visualisation** — `ugit k`, dumping the commit/ref graph as DOT.
-  The code attempts to render with Graphviz's `dot` (and on macOS opens the
-  generated PNG with Preview), but the local rendering path is platform-
-  specific and may be broken; when Graphviz rendering isn't available the
-  DOT is printed and a quickchart.io web fallback is opened instead.
+- **Graph visualisation** — `ugit k`, dumping the commit/ref graph as DOT,
+  rendered via Graphviz if installed, or a quickchart.io fallback if not
 
 ### Known limitations
 
@@ -62,11 +59,6 @@ on top of it:
 - **`diff3` is an external dependency** — three-way merges shell out to
   GNU diffutils' `diff3` binary rather than implementing the merge
   algorithm natively (see Prerequisites below)
- - **`ugit k` local Graphviz rendering is platform-specific / may be broken** —
-   the CLI's local rendering path attempts to call `dot` and open the
-   generated PNG with macOS' Preview; that path can fail on non-macOS
-   systems or due to a bug in the current invocation. In those cases the
-   DOT will be printed and a quickchart.io web fallback is used.
 
 ---
 
@@ -121,6 +113,48 @@ Get-ChildItem *.ps1 | Unblock-File
 
 Run this from inside the folder containing the `.ps1` files before executing
 them (e.g. before `.\00-run-all.ps1`).
+
+### A note on PATH and terminal/IDE environment caching
+
+If `diff3` (or any newly-installed tool) still isn't found even after
+installing it and confirming it's on PATH, the terminal you're using may be
+holding a **stale, cached environment** rather than PATH itself being wrong.
+
+- **Windows**: PATH changes only take effect in *new* processes launched
+  after the change. Opening a new tab inside an already-running app (VS
+  Code, Windows Terminal, etc.) often reuses that app's original
+  environment snapshot rather than fetching a fresh one — so the fix isn't
+  "open a new terminal tab," it's "fully quit and reopen the app itself"
+  (check Task Manager for lingering processes, e.g. `Code.exe`, and end
+  them). If that still doesn't work, the parent shell process
+  (`explorer.exe`) may itself be stale; restarting it forces a reload:
+  ```powershell
+  taskkill /f /im explorer.exe
+  start explorer.exe
+  ```
+  As a reliable workaround either way: run tests from a plain PowerShell 7
+  window opened directly (not through an IDE's integrated terminal) rather
+  than debugging environment inheritance further.
+
+- **macOS**: this specific problem is much less common, because opening a
+  new Terminal/iTerm window normally spawns a brand-new shell process that
+  re-reads your shell's profile (`~/.zprofile`, `~/.zshrc`, etc.) from
+  scratch — so a fresh terminal window is usually enough after installing
+  something with Homebrew. If `diff3` still isn't found after
+  `brew install diffutils`, check that Homebrew's own path is on PATH
+  (Apple Silicon installs to `/opt/homebrew/bin`, Intel Macs to
+  `/usr/local/bin`) by running:
+  ```bash
+  eval "$(brew shellenv)"
+  which diff3
+  ```
+  If that resolves it, add the `brew shellenv` line to your `~/.zprofile`
+  so it's picked up automatically in future sessions. The same *IDE
+  integrated terminal caching an old environment* issue described above for
+  Windows can still happen on macOS too (VS Code, for example, behaves the
+  same way regardless of OS) — if a plain Terminal.app window finds
+  `diff3` but your IDE's terminal doesn't, fully quit and reopen the IDE
+  rather than just the terminal panel/tab.
 
 ---
 
