@@ -1,3 +1,5 @@
+"""Tests for the ugit.base repository operations."""
+
 import os
 import tempfile
 import unittest
@@ -10,6 +12,7 @@ class BaseTestCase(unittest.TestCase):
     """Base class that sets up a fresh, isolated ugit repo per test."""
 
     def setUp(self):
+        """Create a temporary repository and point ugit at it."""
         self.repo_dir = tempfile.mkdtemp(prefix='ugit-base-test-')
         self.old_cwd = os.getcwd()
         os.chdir(self.repo_dir)
@@ -18,10 +21,12 @@ class BaseTestCase(unittest.TestCase):
         base.init()
 
     def tearDown(self):
+        """Restore the original working directory and repository context."""
         self._git_dir_cm.__exit__(None, None, None)
         os.chdir(self.old_cwd)
 
     def write_file(self, path, content):
+        """Write a text file inside the temporary repository."""
         dirname = os.path.dirname(path)
         if dirname:
             os.makedirs(dirname, exist_ok=True)
@@ -31,6 +36,7 @@ class BaseTestCase(unittest.TestCase):
 
 class TestWriteTree(BaseTestCase):
     def test_write_tree_flat_files(self):
+        """write_tree() should preserve flat file names."""
         self.write_file('a.txt', 'a')
         self.write_file('b.txt', 'b')
         base.add(['a.txt', 'b.txt'])
@@ -41,6 +47,7 @@ class TestWriteTree(BaseTestCase):
         self.assertEqual(set(tree.keys()), {'a.txt', 'b.txt'})
 
     def test_write_tree_nested_paths(self):
+        """write_tree() should preserve nested path segments."""
         # Regression test: write_tree() used to do `for dirname in dirpath`,
         # which iterates a path string character-by-character instead of by
         # path segment, mangling nested paths like 'sub/deeper/deep.txt'
@@ -55,6 +62,7 @@ class TestWriteTree(BaseTestCase):
         self.assertIn(expected_path, tree)
 
     def test_write_tree_is_deterministic(self):
+        """write_tree() should produce the same OID for the same index."""
         self.write_file('a.txt', 'a')
         base.add(['a.txt'])
         oid1 = base.write_tree()
@@ -64,6 +72,7 @@ class TestWriteTree(BaseTestCase):
 
 class TestCommitAndOid(BaseTestCase):
     def test_first_commit_has_no_parent(self):
+        """The first commit in a repo should have no parent commits."""
         self.write_file('a.txt', 'a')
         base.add(['a.txt'])
         c1 = base.commit('first')
@@ -71,6 +80,7 @@ class TestCommitAndOid(BaseTestCase):
         self.assertEqual(commit_obj.parents, [])
 
     def test_second_commit_has_first_as_parent(self):
+        """Each new commit should point at the previous commit as its parent."""
         self.write_file('a.txt', 'a')
         base.add(['a.txt'])
         c1 = base.commit('first')
@@ -83,6 +93,7 @@ class TestCommitAndOid(BaseTestCase):
         self.assertEqual(commit_obj.parents, [c1])
 
     def test_get_oid_resolves_raw_oid_tag_and_branch(self):
+        """get_oid() should resolve raw IDs, tags, branches, and @."""
         self.write_file('a.txt', 'a')
         base.add(['a.txt'])
         c1 = base.commit('first')
@@ -95,12 +106,14 @@ class TestCommitAndOid(BaseTestCase):
         self.assertEqual(base.get_oid('@'), c1)
 
     def test_get_oid_raises_for_unknown_name(self):
+        """Unknown names should raise ValueError."""
         with self.assertRaises(ValueError):
             base.get_oid('does-not-exist')
 
 
 class TestCheckout(BaseTestCase):
     def test_checkout_by_oid_detaches_head(self):
+        """Checking out by OID should detach HEAD."""
         self.write_file('a.txt', 'a')
         base.add(['a.txt'])
         c1 = base.commit('first')
@@ -112,6 +125,7 @@ class TestCheckout(BaseTestCase):
         self.assertEqual(head.value, c1)
 
     def test_checkout_by_branch_name_reattaches_head(self):
+        """Checking out a branch name should reattach HEAD."""
         self.write_file('a.txt', 'a')
         base.add(['a.txt'])
         c1 = base.commit('first')
@@ -124,6 +138,7 @@ class TestCheckout(BaseTestCase):
         self.assertEqual(head.value, os.path.join('refs', 'heads', 'master'))
 
     def test_checkout_only_touches_tracked_files(self):
+        """Checkout should leave untracked files alone."""
         # Regression test for the old _empty_current_directory() behaviour,
         # which deleted every untracked file in the working directory on
         # every checkout. Untracked files must survive.
@@ -146,6 +161,7 @@ class TestCheckout(BaseTestCase):
 
 class TestResetAndMerge(BaseTestCase):
     def test_reset_moves_ref_but_not_working_directory(self):
+        """reset() should move HEAD without rewriting the working tree."""
         self.write_file('a.txt', 'a')
         base.add(['a.txt'])
         c1 = base.commit('first')
@@ -162,6 +178,7 @@ class TestResetAndMerge(BaseTestCase):
         self.assertTrue(os.path.exists('b.txt'))
 
     def test_fast_forward_merge_advances_master(self):
+        """Fast-forward merges should advance the current branch pointer."""
         self.write_file('a.txt', 'a')
         base.add(['a.txt'])
         c1 = base.commit('first')
@@ -182,12 +199,15 @@ class TestResetAndMerge(BaseTestCase):
 
 class TestIsIgnored(unittest.TestCase):
     def test_ignores_ugit_internals(self):
+        """Internal ugit paths should be ignored."""
         self.assertTrue(base.is_ignored(os.path.join('.ugit', 'objects', 'abc')))
 
     def test_ignores_venv(self):
+        """Virtualenv paths should be ignored."""
         self.assertTrue(base.is_ignored(os.path.join('.venv', 'lib', 'thing.py')))
 
     def test_does_not_ignore_regular_paths(self):
+        """Ordinary source paths should not be ignored."""
         self.assertFalse(base.is_ignored(os.path.join('src', 'main.py')))
 
 

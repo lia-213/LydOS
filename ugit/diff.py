@@ -1,3 +1,5 @@
+"""Tree and blob diff helpers for ugit."""
+
 from collections import defaultdict
 import difflib
 import subprocess
@@ -21,7 +23,7 @@ def Temp():
                 os.remove(f.name)
 
 def compare_trees(*trees):
-    """Handles arbitrary tree comparisos cleanly using generator unpacking of *oids"""
+    """Yield each path together with the object IDs from all supplied trees."""
     entries = defaultdict(lambda: [None] * len(trees))
     for i, tree in enumerate(trees):
         for path, oid in tree.items():
@@ -31,8 +33,7 @@ def compare_trees(*trees):
         yield(path, *oids)
 
 def iter_changed_files(t_from, t_to):
-    """Generator function that takes two tree objects 
-    (e.g. HEAD_tree as t_from, working_tree as t_to)"""
+    """Yield the paths whose blob IDs differ between two trees."""
     # o_from: OID (blob hash) of file in t_from, or None if OID didn't exist
     # o_to: OID (blob hash) of file in t_to, or None if doesn't exist anymore
     for path, o_from, o_to in compare_trees(t_from, t_to):
@@ -43,7 +44,7 @@ def iter_changed_files(t_from, t_to):
             yield path, action
 
 def diff_trees(t_from, t_to):
-    """Filters out unchanged files early: o_from != o_to"""
+    """Return a unified diff for every changed path between two trees."""
     output = ''
     for path, o_from, o_to in compare_trees(t_from, t_to):
         if o_from != o_to:
@@ -70,12 +71,14 @@ def diff_blobs(o_from, o_to, path='a/file'):
     return ''.join(diff)
 
 def merge_trees(t_base, t_HEAD, t_other):
+    """Merge three tree snapshots path by path and return the merged tree."""
     tree = {}
     for path, o_base, o_HEAD, o_other in compare_trees(t_base, t_HEAD, t_other):
         tree[path] = data.hash_object(merge_blobs(o_base, o_HEAD, o_other))
     return tree
 
 def merge_blobs(o_base, o_HEAD, o_other):
+    """Merge three blob versions with diff3 and return the merged bytes."""
     with Temp() as f_base, Temp() as f_HEAD, Temp() as f_other:
         for oid, f in ((o_base, f_base), (o_HEAD, f_HEAD), (o_other, f_other)):
             if oid:

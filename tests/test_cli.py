@@ -1,3 +1,5 @@
+"""Tests for the ugit.cli command-line interface."""
+
 import io
 import os
 import sys
@@ -16,6 +18,7 @@ class CliTestCase(unittest.TestCase):
     """Base class that sets up a fresh, isolated ugit repo per test."""
 
     def setUp(self):
+        """Create a temporary repository and point the CLI at it."""
         self.repo_dir = tempfile.mkdtemp(prefix='ugit-cli-test-')
         self.old_cwd = os.getcwd()
         os.chdir(self.repo_dir)
@@ -24,14 +27,17 @@ class CliTestCase(unittest.TestCase):
         base.init()
 
     def tearDown(self):
+        """Restore the original working directory and repository context."""
         self._git_dir_cm.__exit__(None, None, None)
         os.chdir(self.old_cwd)
 
     def write_file(self, path, content):
+        """Write a text file for CLI integration tests."""
         with open(path, 'w') as f:
             f.write(content)
 
     def capture(self, func, *args, **kwargs):
+        """Run a callable and capture its standard output."""
         buf = io.StringIO()
         with redirect_stdout(buf):
             result = func(*args, **kwargs)
@@ -40,6 +46,7 @@ class CliTestCase(unittest.TestCase):
 
 class TestParseArgsWiring(CliTestCase):
     def test_merge_subcommand_uses_commit_attribute(self):
+        """merge should parse its operand into args.commit."""
         # Regression test: the 'merge' subparser argument used to be named
         # 'merge' (add_argument('merge', ...)), giving args.merge, while
         # cli.merge() reads args.commit -- causing an AttributeError on
@@ -57,11 +64,13 @@ class TestParseArgsWiring(CliTestCase):
         self.assertEqual(args.commit, c1)
 
     def test_diff_subcommand_commit_defaults_to_none(self):
+        """diff should leave commit unset when no positional arg is given."""
         with patch.object(sys, 'argv', ['ugit', 'diff']):
             args = cli.parse_args()
         self.assertIsNone(args.commit)
 
     def test_checkout_subcommand_requires_commit_argument(self):
+        """checkout should parse the commit argument into args.commit."""
         self.write_file('a.txt', 'a')
         base.add(['a.txt'])
         c1 = base.commit('first')
@@ -73,6 +82,7 @@ class TestParseArgsWiring(CliTestCase):
 
 class TestDiffCommand(CliTestCase):
     def test_diff_modes_follow_expected_sources(self):
+        """_diff() should compare the expected tree sources in each mode."""
         self.write_file('tracked.txt', 'one\n')
         base.add(['tracked.txt'])
         first_commit = base.commit('first')
@@ -100,6 +110,7 @@ class TestDiffCommand(CliTestCase):
 
 class TestBranchCommand(CliTestCase):
     def test_branch_listing_has_no_duplicates(self):
+        """branch listing should print each branch exactly once."""
         # Regression test: branch()'s no-args listing path used to contain
         # a redundant nested `for branch in base.iter_branch_names():` loop,
         # printing every branch once per branch (N branches -> N^2 lines).
@@ -117,6 +128,7 @@ class TestBranchCommand(CliTestCase):
         self.assertEqual(len(feature_lines), 1)
 
     def test_branch_creation_points_at_start_point(self):
+        """branch creation should point at the requested start point."""
         self.write_file('a.txt', 'a')
         base.add(['a.txt'])
         c1 = base.commit('first')
@@ -128,6 +140,7 @@ class TestBranchCommand(CliTestCase):
 
 class TestStatusCommand(CliTestCase):
     def test_status_reports_branch_and_staged_new_file(self):
+        """status should report the branch name and staged additions."""
         self.write_file('a.txt', 'a')
         base.add(['a.txt'])
         base.commit('first')
@@ -144,6 +157,7 @@ class TestStatusCommand(CliTestCase):
 
 class TestTagAndCheckoutCommands(CliTestCase):
     def test_tag_command_creates_resolvable_tag(self):
+        """tag should create a ref that get_oid() can resolve."""
         self.write_file('a.txt', 'a')
         base.add(['a.txt'])
         c1 = base.commit('first')
@@ -153,6 +167,7 @@ class TestTagAndCheckoutCommands(CliTestCase):
         self.assertEqual(base.get_oid('v1'), c1)
 
     def test_checkout_command_switches_working_directory(self):
+        """checkout should restore files from the selected commit."""
         self.write_file('a.txt', 'a')
         base.add(['a.txt'])
         c1 = base.commit('first')

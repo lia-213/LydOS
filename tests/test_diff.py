@@ -1,3 +1,5 @@
+"""Tests for the ugit.diff comparison and merge helpers."""
+
 import os
 import shutil
 import tempfile
@@ -12,6 +14,7 @@ class DiffTestCase(unittest.TestCase):
     """Base class that sets up a fresh, isolated ugit repo per test."""
 
     def setUp(self):
+        """Create a temporary repository and point diff helpers at it."""
         self.repo_dir = tempfile.mkdtemp(prefix='ugit-diff-test-')
         self.old_cwd = os.getcwd()
         os.chdir(self.repo_dir)
@@ -20,12 +23,14 @@ class DiffTestCase(unittest.TestCase):
         base.init()
 
     def tearDown(self):
+        """Restore the original working directory and repository context."""
         self._git_dir_cm.__exit__(None, None, None)
         os.chdir(self.old_cwd)
 
 
 class TestCompareTrees(unittest.TestCase):
     def test_compare_two_trees_reports_all_paths(self):
+        """compare_trees() should align object IDs by path."""
         t_from = {'a.txt': 'oid1', 'b.txt': 'oid2'}
         t_to = {'a.txt': 'oid1', 'b.txt': 'oid3', 'c.txt': 'oid4'}
 
@@ -36,6 +41,7 @@ class TestCompareTrees(unittest.TestCase):
         self.assertEqual(results['c.txt'], (None, 'oid4'))
 
     def test_compare_trees_supports_arbitrary_arity(self):
+        """compare_trees() should support more than two trees."""
         t1 = {'x.txt': 'a'}
         t2 = {'x.txt': 'b'}
         t3 = {'x.txt': 'c'}
@@ -46,6 +52,7 @@ class TestCompareTrees(unittest.TestCase):
 
 class TestIterChangedFiles(unittest.TestCase):
     def test_reports_new_modified_and_deleted(self):
+        """iter_changed_files() should label new, modified, and deleted paths."""
         t_from = {'unchanged.txt': 'oid1', 'modified.txt': 'oid2', 'deleted.txt': 'oid3'}
         t_to = {'unchanged.txt': 'oid1', 'modified.txt': 'oidX', 'new.txt': 'oid4'}
 
@@ -59,6 +66,7 @@ class TestIterChangedFiles(unittest.TestCase):
 
 class TestDiffBlobs(DiffTestCase):
     def test_diff_blobs_shows_added_line(self):
+        """diff_blobs() should emit a unified diff for text changes."""
         oid_from = data.hash_object(b'line one\n')
         oid_to = data.hash_object(b'line one\nline two\n')
 
@@ -69,11 +77,13 @@ class TestDiffBlobs(DiffTestCase):
         self.assertIn('b/file.txt', result)
 
     def test_diff_blobs_handles_new_file(self):
+        """diff_blobs() should handle added files."""
         oid_to = data.hash_object(b'brand new\n')
         result = diff.diff_blobs(None, oid_to, path='new.txt')
         self.assertIn('+brand new', result)
 
     def test_diff_blobs_handles_binary_content(self):
+        """diff_blobs() should report binary differences cleanly."""
         oid_from = data.hash_object(b'hello\n')
         oid_to = data.hash_object(b'hello\n\xff\xfe\xfd\n')
 
@@ -84,6 +94,7 @@ class TestDiffBlobs(DiffTestCase):
 
 class TestDiffTrees(DiffTestCase):
     def test_diff_trees_only_diffs_changed_paths(self):
+        """diff_trees() should include only changed paths."""
         self.write_file('a.txt', 'a\n')
         self.write_file('b.txt', 'b\n')
         base.add(['a.txt', 'b.txt'])
@@ -102,6 +113,7 @@ class TestDiffTrees(DiffTestCase):
         self.assertNotIn('a.txt', result)
 
     def write_file(self, path, content):
+        """Write a file into the test repository."""
         with open(path, 'w') as f:
             f.write(content)
 
@@ -109,6 +121,7 @@ class TestDiffTrees(DiffTestCase):
 @unittest.skipUnless(shutil.which('diff3'), "requires 'diff3' (GNU diffutils) on PATH")
 class TestMergeBlobs(unittest.TestCase):
     def setUp(self):
+        """Create a temporary repository for merge tests."""
         self.repo_dir = tempfile.mkdtemp(prefix='ugit-merge-blobs-test-')
         self.old_cwd = os.getcwd()
         os.chdir(self.repo_dir)
@@ -117,10 +130,12 @@ class TestMergeBlobs(unittest.TestCase):
         base.init()
 
     def tearDown(self):
+        """Restore the original working directory and repository context."""
         self._git_dir_cm.__exit__(None, None, None)
         os.chdir(self.old_cwd)
 
     def test_merge_blobs_non_conflicting_change(self):
+        """merge_blobs() should merge non-conflicting edits cleanly."""
         o_base = data.hash_object(b'line one\nline two\nline three\n')
         o_head = data.hash_object(b'line one CHANGED\nline two\nline three\n')
         o_other = data.hash_object(b'line one\nline two\nline three CHANGED\n')
@@ -132,6 +147,7 @@ class TestMergeBlobs(unittest.TestCase):
         self.assertNotIn(b'<<<<<<<', result)
 
     def test_merge_blobs_conflicting_change_inserts_markers(self):
+        """merge_blobs() should include conflict markers when needed."""
         o_base = data.hash_object(b'shared line\n')
         o_head = data.hash_object(b'head version\n')
         o_other = data.hash_object(b'other version\n')

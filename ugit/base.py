@@ -1,6 +1,8 @@
 """Core repository tree, commit, and reference operations for ugit.
-Handles the higher-level concepts built on top of data.py.
-This is base.py"""
+
+This module builds the higher-level Git-like operations on top of
+``ugit.data`` and ``ugit.diff``.
+"""
 
 import itertools
 import operator
@@ -14,6 +16,7 @@ from . import diff
 from pathlib import Path
 
 def init():
+    """Create the repository metadata and point HEAD at the default branch."""
     data.init()
     data.update_ref('HEAD', data.RefValue(symbolic=True, value=os.path.join('refs', 'heads', 'master')), deref=False)
 
@@ -49,7 +52,7 @@ def write_tree():
     return write_tree_recursive(index_as_tree)
 
 def _iter_tree_entries(oid):
-    """a generator that will take an OID of a tree, tokenise it line-by-line and yield the raw string values"""
+    """Yield the entries stored in a tree object one by one."""
     if not oid:
         return
     tree = data.get_object(oid, 'tree')
@@ -59,7 +62,7 @@ def _iter_tree_entries(oid):
         yield type_, oid, name
 
 def get_tree(oid, base_path=''):
-    """uses _iter_tree_entries to recursively parse a tree into a dict"""
+    """Recursively flatten a tree object into a path-to-OID mapping."""
     result = {}
     for type_, oid, name in _iter_tree_entries(oid):
         if '/' in name or name in ('..', '.'):
@@ -74,9 +77,7 @@ def get_tree(oid, base_path=''):
     return result
 
 def get_working_tree():
-    """Scan the current directory and map every (un)tracked file path
-    to its current blob hash (OID) on disk without actually saving the
-    files to .ugit permanently."""
+    """Scan the working tree and map each tracked file to its current blob OID."""
     result = {} # file_path:file_oid
     for root, _, filenames in os.walk('.'):
         for filename in filenames:
@@ -89,11 +90,12 @@ def get_working_tree():
     return result
 
 def get_index_tree():
+    """Return the current index as a path-to-OID mapping."""
     with data.get_index() as index:
         return index
 
 def _empty_current_directory():
-    """Remove empty directories from the current tree while preserving ignored paths."""
+    """Remove non-ignored tracked content from the current working directory."""
     for root, dirnames, filenames in os.walk('.', topdown=False):
         for filename in filenames:
             path = os.path.relpath(os.path.join(root, filename))
@@ -112,8 +114,7 @@ def _empty_current_directory():
                 pass
 
 def read_tree(tree_oid, update_working=False):
-    """uses get_tree to get the file OIDs and writes them into the working dir.
-    Mimics git checkout <old-commit hash>, which never deletes brand-new, untracked files. It instead leaves them alone precisely so I don't accidentally lose hours of uncommitted work just becuase I wanted to look at an old snapshot."""
+    """Replace the index with a tree snapshot and optionally update the worktree."""
     with data.get_index() as index:
         old_index = dict(index)
         index.clear()
@@ -123,6 +124,7 @@ def read_tree(tree_oid, update_working=False):
             _checkout_index(index, old_index)
 
 def read_tree_merged(t_base, t_HEAD, t_other, update_working=False):
+    """Merge three trees into the index and optionally update the worktree."""
     with data.get_index() as index:
         old_index = dict(index)
         index.clear()
@@ -136,6 +138,7 @@ def read_tree_merged(t_base, t_HEAD, t_other, update_working=False):
             _checkout_index(index, old_index)
 
 def _checkout_index(index, old_index=None):
+    """Write index contents to disk and remove files that disappeared."""
     old_index = old_index or {}
 
     # Remove files that were tracked before but aren't in the new tree
@@ -171,7 +174,7 @@ def commit(message):
     return oid
 
 def checkout(name):
-    """Replace the working tree with the snapshot referenced by a commit OID."""
+    """Check out a commit or branch into the working tree."""
     oid = get_oid(name)
     commit = get_commit(oid)
     read_tree(commit.tree, update_working=True)
@@ -184,9 +187,11 @@ def checkout(name):
     data.update_ref('HEAD', HEAD, deref=False)
 
 def reset(oid):
+    """Move HEAD to the requested commit without touching the working tree."""
     data.update_ref('HEAD', data.RefValue(symbolic=False, value=oid))
 
 def merge(other):
+    """Merge the requested commit into the current branch."""
     HEAD = data.get_ref('HEAD').value
     assert HEAD
     merge_base = get_merge_base(other, HEAD)
@@ -211,6 +216,7 @@ def merge(other):
     print('Merged in working tree\nPlease commit')
 
 def get_merge_base(oid1, oid2):
+    """Return the first shared ancestor of two commits."""
     parents1 = set(iter_commits_and_parents({oid1}))
 
     for oid in iter_commits_and_parents({oid2}):
@@ -218,7 +224,7 @@ def get_merge_base(oid1, oid2):
             return oid
 
 def is_ancestor_of(commit, maybe_ancestor):
-    """Returns True if maybe_ancestor exists within the commit history of the commit."""
+    """Return True when ``maybe_ancestor`` is reachable from ``commit``."""
     return maybe_ancestor in iter_commits_and_parents({commit}) 
    
 def create_tag(name, oid):
@@ -227,16 +233,20 @@ def create_tag(name, oid):
     data.update_ref(os.path.join('refs', 'tags', name), data.RefValue(symbolic=False, value=oid))
 
 def create_branch(name, oid):
+    """Create or update a branch reference for the given object ID."""
     data.update_ref(os.path.join('refs', 'heads', name), data.RefValue(symbolic=False, value=oid))
 
 def iter_branch_names():
+    """Yield the names of all local branches."""
     for refname, _ in data.iter_refs(os.path.join('refs', 'heads')):
         yield os.path.relpath(refname, os.path.join('refs', 'heads'))
         
 def is_branch(branch):
+    """Return True when the named branch reference exists."""
     return data.get_ref(os.path.join('refs', 'heads', branch)).value is not None
 
 def get_branch_name():
+    """Return the currently checked-out branch name, if HEAD is attached."""
     HEAD = data.get_ref('HEAD', deref=False)
     if not HEAD.symbolic:
         return None
@@ -267,7 +277,7 @@ def get_commit(oid):
     return Commit(tree=tree, parents=parents, message=message)
 
 def iter_commits_and_parents(oids):
-    """generator that returns all commits that it can reach from a given set of OIDs"""
+    """Yield every commit reachable from the supplied object IDs."""
     # N.B. must yield the oid before accessing it (to allow caller to fetch it if needed)
     # modified BFS with double ended queue so the main-line history is prioritised
     oids = deque(oids) # converts input list of starting commit hashes into a collections.deque so items can be efficiently popped and pushed from both the left and right ends
@@ -288,10 +298,7 @@ def iter_commits_and_parents(oids):
         oids.extend(commit.parents[1:]) # pushes any additional parents (from merge commits) to the right of the queue so they get processed later
 
 def iter_objects_in_commits(oids):
-    # N.B. Must yield the oid before accessing it (to allow caller to fetch it if needed)
-    """yields every single object inside commit objects, including all tree directories and file blobs
-    --- this is how Git knows every object needed to package a commit for transfer.
-    Note: before accessing an OID, we yield it, to give the caller a chance to fetch it if it is missing."""
+    """Yield every commit, tree, and blob reachable from the supplied OIDs."""
     visited = set() # tracks all object hashes (commits, trees and blobs) to ensure each unique object is onlly yielded once
     def iter_objects_in_tree(oid): # recursive generator (inner helper) that deeply walks directory trees
         visited.add(oid)
@@ -337,8 +344,10 @@ def get_oid(name):
     raise ValueError(f'unknown name {name}')
 
 def add(filenames):
+    """Add the requested files or directories to the index."""
 
     def add_file(filename):
+        """Hash a single file and record it in the current index."""
         # Normalise path
         filename = os.path.relpath(filename)
         with open(filename, 'rb') as f:
@@ -346,6 +355,7 @@ def add(filenames):
         index[filename] = oid
 
     def add_directory(dirname):
+        """Walk a directory recursively and add every tracked file inside it."""
         for root, _, filenames in os.walk(dirname):
             for filename in filenames:
                 # Normalise path

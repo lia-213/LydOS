@@ -1,3 +1,5 @@
+"""Tests for the ugit.remote fetch and push helpers."""
+
 import os
 import tempfile
 import unittest
@@ -22,6 +24,7 @@ def repo(path):
 
 
 def make_repo_with_commit(message='first', filename='file.txt', content='hello\n'):
+    """Create a temporary repository containing a single commit."""
     repo_dir = tempfile.mkdtemp(prefix='ugit-remote-test-')
     with repo(repo_dir):
         base.init()
@@ -34,6 +37,7 @@ def make_repo_with_commit(message='first', filename='file.txt', content='hello\n
 
 class TestFetch(unittest.TestCase):
     def test_fetch_copies_objects_and_creates_local_ref(self):
+        """fetch() should copy remote objects and create remote-tracking refs."""
         remote_dir, remote_commit = make_repo_with_commit()
         local_dir = tempfile.mkdtemp(prefix='ugit-remote-local-')
 
@@ -47,6 +51,7 @@ class TestFetch(unittest.TestCase):
             self.assertEqual(local_remote_ref.value, remote_commit)
 
     def test_fetch_does_not_touch_local_master(self):
+        """fetch() should not overwrite the local branch tip."""
         remote_dir, remote_commit = make_repo_with_commit()
         local_dir, local_commit = make_repo_with_commit(message='local first', filename='local.txt')
 
@@ -58,6 +63,7 @@ class TestFetch(unittest.TestCase):
 
 class TestPush(unittest.TestCase):
     def test_push_to_empty_remote_succeeds(self):
+        """push() should initialize an empty remote repository."""
         # Regression test: pushing to a brand-new remote with no commits
         # used to crash with TypeError, because _get_remote_refs() returns
         # {'HEAD': None} for an empty repo, and that None oid was passed
@@ -77,6 +83,7 @@ class TestPush(unittest.TestCase):
             self.assertEqual(remote_master.value, local_commit)
 
     def test_push_updates_existing_remote_ref(self):
+        """push() should advance an existing remote ref on fast-forward."""
         remote_dir, remote_commit = make_repo_with_commit(message='remote first')
         local_dir = tempfile.mkdtemp(prefix='ugit-remote-local2-')
 
@@ -102,6 +109,7 @@ class TestPush(unittest.TestCase):
             self.assertEqual(remote_master.value, local_commit)
 
     def test_push_rejects_non_fast_forward(self):
+        """push() should reject non-fast-forward updates."""
         remote_dir, remote_commit = make_repo_with_commit(message='remote first')
         local_dir, local_commit = make_repo_with_commit(message='unrelated local history')
 
@@ -110,6 +118,7 @@ class TestPush(unittest.TestCase):
                 remote.push(remote_dir, os.path.join('refs', 'heads', 'master'))
 
     def test_push_raises_if_local_ref_missing(self):
+        """push() should raise when the requested local ref is absent."""
         remote_dir, _ = make_repo_with_commit()
         local_dir = tempfile.mkdtemp(prefix='ugit-remote-nolocal-')
 

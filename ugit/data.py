@@ -9,23 +9,14 @@ import shutil
 from collections import namedtuple
 from contextlib import contextmanager
 
-# Will be initialised in cli.main()
-""" establishes a module-level global var. that tracks where ugit looks for
-repository data (like .ugit/objects, .ugit/refs, etc.)"""
-GIT_DIR = None
+"""Object storage and reference file helpers for ugit."""
 
-"""Context manager designed to temporarily swap out the location of the 
-.ugit directory (like running a command in a different git repository or
-temporary repo) and then automatically restore it back to what is was 
-when the task is done."""
-"""context managers turn a simple generator function into smth you can use 
-with a with block - instead of writing a full class with __enter__ and __exit__
-methods, @contextmanager elts you write a single function
----- everything before "yield" runs when entering the "with" block
----- everything after "yield" runs when exiting the with block"""
+# Will be initialised in cli.main()
+GIT_DIR = None
 
 @contextmanager
 def change_git_dir(new_dir):
+    """Temporarily point ugit at another repository directory."""
     global GIT_DIR # "global" - modifications inside this context manager function should update the module's top-level GIT_DIR variable, rather than crating a temporary local variable with the same name
     old_dir = GIT_DIR # saves current repo path before making any changes, acting as a bookmark so it knows where to return to later
     GIT_DIR = os.path.join(new_dir, '.ugit') # switches GIT_DIR to point to the .ugit folder inside new_dir
@@ -61,8 +52,10 @@ def update_ref(ref, value, deref=True):
             f.write(value.value)
 
 def get_ref(ref, deref=True):
+    """Read a reference and optionally dereference symbolic refs."""
     return _get_ref_internal(ref, deref)[1]
 def delete_ref(ref, deref=True):
+    """Delete a reference file, optionally resolving symbolic refs first."""
     ref = _get_ref_internal(ref, deref)[0]
     os.remove(os.path.join(GIT_DIR, ref))
 
@@ -105,6 +98,7 @@ def iter_refs(prefix='', deref=True):
 
 @contextmanager
 def get_index():
+    """Load the index into memory and write it back when the block exits."""
     index = {}
     if os.path.isfile(os.path.join(GIT_DIR, 'index')):
         with open(os.path.join(GIT_DIR, 'index')) as f:
@@ -146,18 +140,20 @@ def get_object(oid, expected='blob'):
     return content
 
 def object_exists(oid):
+    """Return True when the requested object exists in the object store."""
     if not oid:
         return False
     return os.path.isfile(os.path.join(GIT_DIR, 'objects', oid))
 
 def fetch_object_if_missing(oid, remote_git_dir):
-    """conditionally copy objects from a remote repository by OID"""
+    """Copy a missing object from a remote repository into the local store."""
     if object_exists(oid):
         return
     remote_git_dir = os.path.join(remote_git_dir, '.ugit')
     shutil.copy(os.path.join(remote_git_dir, 'objects', oid), os.path.join(GIT_DIR, 'objects', oid))
 
 def push_object(oid, remote_git_dir):
+    """Copy an object from the local store into a remote repository."""
     remote_git_dir = os.path.join(remote_git_dir, '.ugit')
     shutil.copy(os.path.join(GIT_DIR, 'objects', oid),
                 os.path.join(remote_git_dir, 'objects', oid))

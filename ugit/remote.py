@@ -1,3 +1,5 @@
+"""Remote fetch and push helpers for ugit."""
+
 import os
 
 from . import base
@@ -7,7 +9,7 @@ REMOTE_REFS_BASE = os.path.join('refs', 'heads')
 LOCAL_REFS_BASE = os.path.join('refs', 'remote')
 
 def fetch(remote_path):
-    """Iterate over all objects and fetch missing ones"""
+    """Fetch remote commits, trees, blobs, and update local remote refs."""
     # Get refs from server
     refs = _get_remote_refs(remote_path, REMOTE_REFS_BASE)
 
@@ -22,6 +24,7 @@ def fetch(remote_path):
                         data.RefValue(symbolic=False, value=value))
 
 def push(remote_path, refname):
+    """Push a local ref to a remote repository if the update is fast-forward."""
     # Get refs data
     remote_refs = _get_remote_refs(remote_path)
     remote_ref = remote_refs.get(refname)
@@ -57,5 +60,6 @@ def push(remote_path, refname):
     # exiting the with block: automatically switches GIT_DIR back to local repo directory
             
 def _get_remote_refs(remote_path, prefix=''):
+    """Return remote references as a plain name-to-OID mapping."""
     with data.change_git_dir(remote_path):
         return {refname: ref.value for refname, ref in data.iter_refs(prefix)}

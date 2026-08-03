@@ -141,6 +141,7 @@ def commit(args):
     print(base.commit(args.message))
 
 def _print_commit(oid, commit, refs=None):
+    """Print a commit header and its message, optionally with ref names."""
     refs_str = f' ({", ".join(refs)})' if refs else ''
     print(f'commit {oid}{refs_str}\n')
     print(textwrap.indent(commit.message, '     '))
@@ -157,6 +158,7 @@ def log(args):
         _print_commit(oid, commit, refs.get(oid))
 
 def show(args):
+    """Print a commit and the diff introduced by that commit."""
     if not args.oid:
         return
     commit = base.get_commit(args.oid)
@@ -180,6 +182,7 @@ def tag(args):
     base.create_tag(args.name, oid)
 
 def branch(args):
+    """List branches or create a new branch, depending on the arguments."""
     if not args.name:
         current = base.get_branch_name()
         for branch in base.iter_branch_names():
@@ -247,6 +250,7 @@ def k(args):
             webbrowser.open(url)
 
 def status(args):
+    """Show the current branch and the staged and unstaged file changes."""
     HEAD = base.get_oid('@')
     branch = base.get_branch_name()
 
@@ -262,11 +266,6 @@ def status(args):
     print("\nChanges to be committed:\n")
     HEAD_tree = HEAD and base.get_commit(HEAD).tree
 
-    """Equivalent to:
-    if HEAD:
-        HEAD_tree = base.get_commit(HEAD).tree
-    else: HEAD_tree = None"""
-
     for path, action in diff.iter_changed_files(base.get_tree(HEAD_tree), 
                                                 base.get_index_tree()):
         print(f'{action:>12}: {path}')
@@ -277,15 +276,19 @@ def status(args):
         print(f'{action:>12}: {path}')
 
 def reset(args):
+    """Move HEAD to the selected commit."""
     base.reset(args.commit)
 
 def merge(args):
+    """Merge the requested commit into the current branch."""
     base.merge(args.commit)
 
 def merge_base(args):
+    """Print the best common ancestor of two commits."""
     print(base.get_merge_base(args.commit1, args.commit2))
 
 def fetch(args):
+    """Fetch refs and objects from a remote repository."""
     remote.fetch(args.remote)
 
 def _diff(args):
@@ -324,7 +327,9 @@ def _diff(args):
     return result
 
 def push(args):
+    """Push the selected branch to a remote repository."""
     remote.push(args.remote, os.path.join('refs', 'heads', args.branch))
 
 def add(args):
+    """Add the requested files to the index."""
     base.add(args.files)
