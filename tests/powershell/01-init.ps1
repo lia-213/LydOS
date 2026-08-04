@@ -13,14 +13,14 @@ Push-Location $dir
 # First init: should create .ugit fresh
 ugit init
 
-if (Test-Path ".ugit\objects") {
+if (Test-Path ".ugit/objects") {
     Write-Host "  [PASS] .ugit/objects created" -ForegroundColor Green
 } else {
     Write-Host "  [FAIL] .ugit/objects missing" -ForegroundColor Red
 }
 
-if (Test-Path ".ugit\HEAD") {
-    $head = Get-Content ".ugit\HEAD" -Raw
+if (Test-Path ".ugit/HEAD") {
+    $head = Get-Content ".ugit/HEAD" -Raw
     if ($head -match "ref: refs.heads.master") {
         Write-Host "  [PASS] HEAD points symbolically at refs/heads/master" -ForegroundColor Green
     } else {

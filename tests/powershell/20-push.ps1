@@ -34,7 +34,7 @@ Write-Host "  local commit = $localCommit"
 Write-Host "`n--- Local repo's graph (before push) ---" -ForegroundColor Cyan
 ugit k
 
-$remotePath = (Resolve-Path "..\$remoteDir").Path
+$remotePath = (Resolve-Path "../$remoteDir").Path
 Write-Host "`n--- Pushing local master to $remotePath ---"
 try {
     ugit push $remotePath master
@@ -46,14 +46,14 @@ Pop-Location
 
 # --- Verify from the remote side ---
 Write-Host "`n--- Checking remote repo after push ---"
-if (Test-Path "$remoteDir\.ugit\objects\$localCommit") {
+if (Test-Path "$remoteDir/.ugit/objects/$localCommit") {
     Write-Host "  [PASS] Commit object copied to remote object store" -ForegroundColor Green
 } else {
     Write-Host "  [FAIL] Commit object missing on remote" -ForegroundColor Red
 }
 
-if (Test-Path "$remoteDir\.ugit\refs\heads\master") {
-    $remoteMasterValue = (Get-Content "$remoteDir\.ugit\refs\heads\master" -Raw).Trim()
+if (Test-Path "$remoteDir/.ugit/refs/heads/master") {
+    $remoteMasterValue = (Get-Content "$remoteDir/.ugit/refs/heads/master" -Raw).Trim()
     if ($remoteMasterValue -eq $localCommit) {
         Write-Host "  [PASS] Remote master ref updated to pushed commit" -ForegroundColor Green
     } else {

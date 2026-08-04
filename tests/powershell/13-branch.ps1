@@ -22,8 +22,8 @@ ugit tag branch-point $c1
 Write-Host "`n--- Creating branch 'feature' at current HEAD ---"
 ugit branch feature
 
-if (Test-Path ".ugit\refs\heads\feature") {
-    $branchOid = (Get-Content ".ugit\refs\heads\feature" -Raw).Trim()
+if (Test-Path ".ugit/refs/heads/feature") {
+    $branchOid = (Get-Content ".ugit/refs/heads/feature" -Raw).Trim()
     if ($branchOid -eq $c1) {
         Write-Host "  [PASS] Branch 'feature' correctly points at $c1" -ForegroundColor Green
     } else {
@@ -40,7 +40,7 @@ ugit add b.txt
 $c2 = ugit commit -m "commit 2 on feature"
 ugit tag feature-tip $c2
 
-$masterOid = (Get-Content ".ugit\refs\heads\master" -Raw).Trim()
+$masterOid = (Get-Content ".ugit/refs/heads/master" -Raw).Trim()
 if ($masterOid -eq $c1) {
     Write-Host "  [PASS] master untouched by commits made on feature branch" -ForegroundColor Green
 } else {

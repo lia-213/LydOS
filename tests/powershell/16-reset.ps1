@@ -30,13 +30,13 @@ $c2 = ugit commit -m "commit 2"
 ugit tag pre-reset $c2
 
 Write-Host "`n--- Before reset: master points at commit 2 ---"
-$before = (Get-Content .ugit\refs\heads\master -Raw).Trim()
+$before = (Get-Content .ugit/refs/heads/master -Raw).Trim()
 Write-Host "  master = $before (expected $c2)"
 
 ugit reset $c1
 
 Write-Host "`n--- After reset $c1 ---"
-$after = (Get-Content .ugit\refs\heads\master -Raw).Trim()
+$after = (Get-Content .ugit/refs/heads/master -Raw).Trim()
 Write-Host "  master = $after (expected $c1)"
 
 if ($after -eq $c1) {

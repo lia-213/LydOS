@@ -21,7 +21,7 @@ if ($oid.Length -eq 64) {
     Write-Host "  [FAIL] OID has unexpected length: $($oid.Length)" -ForegroundColor Red
 }
 
-$objectPath = ".ugit\objects\$oid"
+$objectPath = ".ugit/objects/$oid"
 if (Test-Path $objectPath) {
     Write-Host "  [PASS] Object file written to $objectPath" -ForegroundColor Green
 } else {

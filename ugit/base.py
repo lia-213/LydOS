@@ -67,11 +67,11 @@ def get_tree(oid, base_path=''):
     for type_, oid, name in _iter_tree_entries(oid):
         if '/' in name or name in ('..', '.'):
             raise ValueError(f"Malicious or invalid filename detected in tree: {name}")
-        path = base_path + name
+        path = os.path.join(base_path, name) if base_path else name
         if type_ == 'blob':
             result[path] = oid
         elif type_ == 'tree':
-            result.update(get_tree(oid, f'{path}/'))
+            result.update(get_tree(oid, path))
         else:
             raise ValueError(f'Unknown tree entry {type_}')
     return result

@@ -24,13 +24,13 @@ Write-Host "  tree oid = $treeOid"
 ugit add other.txt
 
 Write-Host "`n--- Index before read-tree ---"
-Get-Content .ugit\index -Raw
+Get-Content .ugit/index -Raw
 
 ugit read-tree $treeOid
 
 Write-Host "`n--- Index after read-tree (should match the tree, i.e. only file.txt) ---"
-$index = Get-Content .ugit\index -Raw | ConvertFrom-Json
-Get-Content .ugit\index -Raw
+$index = Get-Content .ugit/index -Raw | ConvertFrom-Json
+Get-Content .ugit/index -Raw
 
 if (($index.PSObject.Properties.Name -contains "file.txt") -and
     ($index.PSObject.Properties.Name -notcontains "other.txt")) {

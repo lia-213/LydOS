@@ -15,13 +15,13 @@ ugit add file.txt
 $commit1 = ugit commit -m "first commit"
 Write-Host "  commit1 = $commit1"
 
-if (Test-Path ".ugit\objects\$commit1") {
+if (Test-Path ".ugit/objects/$commit1") {
     Write-Host "  [PASS] Commit object written to disk" -ForegroundColor Green
 } else {
     Write-Host "  [FAIL] Commit object missing" -ForegroundColor Red
 }
 
-$headValue = Get-Content ".ugit\refs\heads\master" -Raw
+$headValue = Get-Content ".ugit/refs/heads/master" -Raw
 if ($headValue.Trim() -eq $commit1) {
     Write-Host "  [PASS] refs/heads/master points at the new commit" -ForegroundColor Green
 } else {

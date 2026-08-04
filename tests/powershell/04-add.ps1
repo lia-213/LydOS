@@ -13,11 +13,11 @@ ugit init
 
 "root file" | Out-File -Encoding ascii root.txt
 New-Item -ItemType Directory -Path sub | Out-Null
-"nested file" | Out-File -Encoding ascii sub\nested.txt
+"nested file" | Out-File -Encoding ascii sub/nested.txt
 
 Write-Host "`n--- Adding a single file ---"
 ugit add root.txt
-$index = Get-Content .ugit\index -Raw | ConvertFrom-Json
+$index = Get-Content .ugit/index -Raw | ConvertFrom-Json
 if ($index.PSObject.Properties.Name -contains "root.txt") {
     Write-Host "  [PASS] root.txt staged" -ForegroundColor Green
 } else {
@@ -26,17 +26,19 @@ if ($index.PSObject.Properties.Name -contains "root.txt") {
 
 Write-Host "`n--- Adding a directory (recursive) ---"
 ugit add sub
-$index = Get-Content .ugit\index -Raw | ConvertFrom-Json
-if ($index.PSObject.Properties.Name -contains "sub\nested.txt") {
-    Write-Host "  [PASS] sub\nested.txt staged via directory add" -ForegroundColor Green
+$index = Get-Content .ugit/index -Raw | ConvertFrom-Json
+# Use the native separator only when matching Python's JSON index keys.
+$sep = [System.IO.Path]::DirectorySeparatorChar
+if ($index.PSObject.Properties.Name -contains "sub${sep}nested.txt") {
+    Write-Host "  [PASS] sub${sep}nested.txt staged via directory add" -ForegroundColor Green
 } else {
-    Write-Host "  [FAIL] sub\nested.txt not staged" -ForegroundColor Red
+    Write-Host "  [FAIL] sub${sep}nested.txt not staged" -ForegroundColor Red
 }
 
 Write-Host "`n--- Adding multiple explicit filenames at once ---"
 "another root file" | Out-File -Encoding ascii root2.txt
 ugit add root.txt root2.txt
-$index = Get-Content .ugit\index -Raw | ConvertFrom-Json
+$index = Get-Content .ugit/index -Raw | ConvertFrom-Json
 if (($index.PSObject.Properties.Name -contains "root.txt") -and ($index.PSObject.Properties.Name -contains "root2.txt")) {
     Write-Host "  [PASS] Multiple files staged in one call" -ForegroundColor Green
 } else {

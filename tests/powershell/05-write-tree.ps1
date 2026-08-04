@@ -12,7 +12,7 @@ Push-Location $dir
 ugit init
 "root file" | Out-File -Encoding ascii root.txt
 New-Item -ItemType Directory -Path sub | Out-Null
-"nested file" | Out-File -Encoding ascii sub\nested.txt
+"nested file" | Out-File -Encoding ascii sub/nested.txt
 ugit add root.txt sub
 
 $treeOid = ugit write-tree
@@ -24,7 +24,7 @@ if ($treeOid.Length -eq 64) {
     Write-Host "  [FAIL] Unexpected OID format" -ForegroundColor Red
 }
 
-$objectPath = ".ugit\objects\$treeOid"
+$objectPath = ".ugit/objects/$treeOid"
 if (Test-Path $objectPath) {
     Write-Host "  [PASS] Tree object written to disk" -ForegroundColor Green
     $raw = Get-Content $objectPath -Raw

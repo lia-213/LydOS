@@ -17,8 +17,8 @@ $c1 = ugit commit -m "commit 1"
 Write-Host "`n--- Tagging current HEAD as 'v1.0' (no explicit oid) ---"
 ugit tag v1.0
 
-if (Test-Path ".ugit\refs\tags\v1.0") {
-    $tagValue = (Get-Content ".ugit\refs\tags\v1.0" -Raw).Trim()
+if (Test-Path ".ugit/refs/tags/v1.0") {
+    $tagValue = (Get-Content ".ugit/refs/tags/v1.0" -Raw).Trim()
     if ($tagValue -eq $c1) {
         Write-Host "  [PASS] Tag v1.0 correctly points at $c1" -ForegroundColor Green
     } else {
@@ -35,7 +35,7 @@ $c2 = ugit commit -m "commit 2"
 Write-Host "`n--- Tagging an explicit older commit as 'v0.9' ---"
 ugit tag v0.9 $c1
 
-$tagValue2 = (Get-Content ".ugit\refs\tags\v0.9" -Raw).Trim()
+$tagValue2 = (Get-Content ".ugit/refs/tags/v0.9" -Raw).Trim()
 if ($tagValue2 -eq $c1) {
     Write-Host "  [PASS] Tag v0.9 correctly points at explicit oid $c1" -ForegroundColor Green
 } else {

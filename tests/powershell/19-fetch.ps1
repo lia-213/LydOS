@@ -32,7 +32,7 @@ New-Item -ItemType Directory -Path $localDir | Out-Null
 Push-Location $localDir
 ugit init
 
-$remotePath = (Resolve-Path "..\$remoteDir").Path
+$remotePath = (Resolve-Path "../$remoteDir").Path
 Write-Host "`n--- Fetching from $remotePath ---"
 try {
     ugit fetch $remotePath
@@ -41,7 +41,7 @@ try {
     Write-Host "  [FAIL] fetch raised an error: $($_.Exception.Message)" -ForegroundColor Red
 }
 
-if (Test-Path ".ugit\objects\$remoteCommit") {
+if (Test-Path ".ugit/objects/$remoteCommit") {
     Write-Host "  [PASS] Remote commit object copied into local object store" -ForegroundColor Green
 } else {
     Write-Host "  [FAIL] Remote commit object NOT found locally (see note re: ref path separators)" -ForegroundColor Red

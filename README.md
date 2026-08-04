@@ -225,6 +225,11 @@ cd C:\Users\lydbo\ugit-sandbox\ugit-scripts
 Or use `run-ps1-tests.ps1` (in this repo's root, or wherever you keep it) to
 do the copy + run in one step — see below.
 
+When editing the PowerShell tests, use forward slashes in file paths passed to
+`ugit` and PowerShell cmdlets. Only use the native separator when comparing
+against JSON index keys, because those keys come from Python's stored path
+format on that OS.
+
 ### `.gitignore` safety net
 
 In case the PowerShell scripts are ever accidentally run from inside this

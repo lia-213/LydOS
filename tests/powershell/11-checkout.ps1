@@ -32,7 +32,7 @@ if ((Test-Path a.txt) -and -not (Test-Path b.txt)) {
     Write-Host "  [FAIL] Working dir does not match commit 1" -ForegroundColor Red
 }
 
-$headRaw = Get-Content .ugit\HEAD -Raw
+$headRaw = Get-Content .ugit/HEAD -Raw
 if ($headRaw.Trim() -eq $c1) {
     Write-Host "  [PASS] HEAD is detached, pointing directly at $c1" -ForegroundColor Green
 } else {
@@ -57,7 +57,7 @@ if ((Test-Path a.txt) -and (Test-Path b.txt)) {
     Write-Host "  [FAIL] Working dir does not match master" -ForegroundColor Red
 }
 
-$headRaw2 = Get-Content .ugit\HEAD -Raw
+$headRaw2 = Get-Content .ugit/HEAD -Raw
 if ($headRaw2 -match "ref: refs.heads.master") {
     Write-Host "  [PASS] HEAD is symbolic again, pointing at refs/heads/master" -ForegroundColor Green
 } else {
