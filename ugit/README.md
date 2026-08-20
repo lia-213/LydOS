@@ -1,7 +1,16 @@
 # l_git (ugit)
 
 A from-scratch reimplementation of git, built to actually understand what
-git is doing under the hood rather than just using it.
+git is doing under the hood rather than just using it. Project name is
+`l_git`; the tool/CLI itself is `ugit`, per the tutorial it's built from
+(see below) — `l_git` refers to the project, `ugit` is the actual command,
+package, and folder name.
+
+This is the `ugit/` component of [LydOS](../README.md), an evolving
+monorepo of systems projects. It's the oldest and most complete piece —
+everything else (HTTP server, database, cache, containers, distributed
+consensus) is being built alongside it, and will eventually integrate
+with it (e.g. the HTTP server exposing `ugit` repositories over an API).
 
 This project follows [Nikita Leshenko's *"Write yourself a Git!"*](https://www.leshenko.net/p/ugit/)
 tutorial — huge thanks to Nikita for writing a walkthrough that actually
@@ -64,8 +73,7 @@ on top of it:
 
 ## Where I'm hoping to take this next
 
-A few directions I want to push this in beyond where the tutorial (and the
-current state of this repo) leaves off:
+See [`ugit-next.md`](./ugit-next.md) for the full, up-to-date backlog. Short version:
 
 - **`ugit log --graph`** — a real ASCII/text commit graph rendered inline
   in the terminal, instead of relying on `ugit k` + Graphviz/a browser tab
@@ -77,6 +85,9 @@ current state of this repo) leaves off:
 - **`ugit ai-commit`** — generate a candidate commit message by feeding the
   staged diff to an LLM, shown to the user for review/edit before actually
   committing (never auto-committed unreviewed)
+- **`ugit serve`** — expose repositories over HTTP once the LydOS HTTP
+  server component exists (`GET /repos/:user/commits`, `.../tree`,
+  `.../diff`) — this is the first planned LydOS integration
 - Continuing to harden the test suite (both the Python `unittest` suite and
   the PowerShell CLI-level scripts) as a safety net for any of the above
 
@@ -160,8 +171,15 @@ holding a **stale, cached environment** rather than PATH itself being wrong.
 
 ## Running tests
 
+Install this component with its dev dependencies (currently just `pytest`):
+
 ```powershell
-pip install -r requirements-dev.txt
+pip install -e ".[dev]"
+```
+
+Then run either test suite:
+
+```powershell
 python -m unittest discover -s tests -v
 # or, if using pytest:
 pytest tests/ -v
@@ -171,41 +189,62 @@ pytest tests/ -v
 
 ## Repo layout and test workflow
 
-Source code and all tests (Python + PowerShell) live in this repo (`l_git`)
-and are tracked by real git as normal. The PowerShell CLI test scripts are
-never *run* from inside this repo, though — they're run from a separate,
-untracked sandbox directory, so a buggy `ugit checkout`/`add`/etc. can never
-touch this source tree (see commit/PR history if you're ever curious why
-this rule exists — short version: it happened once, it's not happening
-again).
+This is one component of the [LydOS](../README.md) monorepo. Source code and
+all tests (Python + PowerShell) live in this folder and are tracked by git
+as normal:
 
 ```
-l_git/                          <- this repo, tracked by real git
-  ugit/                         <- ugit source
+LydOS/                           <- monorepo root
+  ugit/                          <- this folder, tracked by git
+    ugit/                        <- ugit source
+    tests/
+      test_base.py               <- Python unittest suite
+      test_cli.py
+      test_data.py
+      test_diff.py
+      test_remote.py
+      powershell/                <- CLI-level .ps1 test scripts
+        00-run-all.ps1
+        ...
+    setup.py
+    run-ps1-tests.ps1
+    ugit-next.md
+    README.md                    <- this file
+  http/                          <- other LydOS components
+  database/
+  cache/
+  containers/
+  distributed/
+```
+
+The PowerShell CLI test scripts are never *run* from inside this repo,
+though — they're run from a separate, untracked sandbox directory, so a
+buggy `ugit checkout`/`add`/etc. can never touch this source tree (see
+commit/PR history if you're ever curious why this rule exists — short
+version: it happened once, it's not happening again).
+
+```
+ugit/                            <- this folder, tracked by git
+  ugit/
   tests/
-    test_base.py                <- Python unittest suite
-    test_cli.py
-    test_data.py
-    test_diff.py
-    test_remote.py
-    powershell/                 <- CLI-level .ps1 test scripts
+    powershell/
       00-run-all.ps1
-      01-init.ps1
       ...
 
-ugit-sandbox/                   <- NOT tracked by git, purely local scratch
-  ugit-scripts/                 <- scripts get copied here before running
+ugit-sandbox/                    <- NOT tracked by git, purely local scratch
+  ugit-scripts/                  <- scripts get copied here before running
     (copies of the .ps1 files, plus disposable test-*/ output dirs)
 ```
 
 ### One-time setup
 
-Move the PowerShell scripts into this repo alongside the Python tests:
+Move the PowerShell scripts into this repo alongside the Python tests
+(adjust the sandbox path to wherever you keep it):
 
 ```powershell
-cd C:\Users\lydbo\l_git
-mkdir tests\powershell
-Copy-Item C:\Users\lydbo\ugit-sandbox\ugit-scripts\*.ps1 tests\powershell\
+cd /Users/lydiakoleosho/l_git/ugit
+mkdir tests/powershell
+Copy-Item /path/to/ugit-sandbox/ugit-scripts/*.ps1 tests/powershell/
 git add tests/powershell/
 git commit -m "Add PowerShell CLI test scripts covering all ugit commands"
 git push
@@ -213,22 +252,22 @@ git push
 
 ### Running the PowerShell tests day-to-day
 
-Never run the `.ps1` scripts directly from `tests\powershell\` inside this
+Never run the `.ps1` scripts directly from `tests/powershell/` inside this
 repo. Instead, copy them out to the sandbox and run them from there:
 
 ```powershell
-Copy-Item C:\Users\lydbo\l_git\tests\powershell\*.ps1 C:\Users\lydbo\ugit-sandbox\ugit-scripts\ -Force
-cd C:\Users\lydbo\ugit-sandbox\ugit-scripts
-.\00-run-all.ps1
+Copy-Item /Users/lydiakoleosho/l_git/ugit/tests/powershell/*.ps1 /path/to/ugit-sandbox/ugit-scripts/ -Force
+cd /path/to/ugit-sandbox/ugit-scripts
+./00-run-all.ps1
 ```
 
-Or use `run-ps1-tests.ps1` (in this repo's root, or wherever you keep it) to
-do the copy + run in one step — see below.
+Or use `run-ps1-tests.ps1` (in this folder's root) to do the copy + run in
+one step.
 
-When editing the PowerShell tests, use forward slashes in file paths passed to
-`ugit` and PowerShell cmdlets. Only use the native separator when comparing
-against JSON index keys, because those keys come from Python's stored path
-format on that OS.
+When editing the PowerShell tests, use forward slashes in file paths passed
+to `ugit` and PowerShell cmdlets. Only use the native separator when
+comparing against JSON index keys, because those keys come from Python's
+stored path format on that OS.
 
 ### `.gitignore` safety net
 

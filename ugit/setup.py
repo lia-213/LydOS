@@ -11,4 +11,8 @@ setup(name = 'ugit',
            'console_scripts' : [
                'ugit = ugit.cli:main'
            ]
-       })
+       },
+       extras_require= {
+           'dev':['pytest']
+        }
+    )
