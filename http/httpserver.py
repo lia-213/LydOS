@@ -26,8 +26,17 @@ while True:
     request = client_connection.recv(1024).decode()
     print(request)
 
-    # Get the content of htdocs/index.html - read the contents of the file and add it to the response string as a message body
-    fin = open('htdocs/index.html')
+    # Parse HTTP headers, e.g. GET /ipsum.html HTTP1.1\n...
+    headers = request.split('\n')
+    # e.g. GET /ipsum.html HTTP/1.1
+    filename =  headers[0].split()[1]
+
+    # Get the content of the file
+    if filename in ['/', '/favicon.ico']:
+        filename = '/index.html'
+
+    # ASSUMPTION: all html files are inside the htdocs folder    
+    fin = open('htdocs' + filename)
     content = fin.read()
     fin.close()
 
