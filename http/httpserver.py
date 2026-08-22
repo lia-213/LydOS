@@ -36,12 +36,17 @@ while True:
         filename = '/index.html'
 
     # ASSUMPTION: all html files are inside the htdocs folder    
-    fin = open('htdocs' + filename)
-    content = fin.read()
-    fin.close()
+    try:
+        fin = open('htdocs' + filename)
+        content = fin.read()
+        fin.close()
+
+        response = 'HTTP/1.0 200 OK\n\n' + content
+    except FileNotFoundError:
+
+        response = 'HTTP/1.0 404 NOT FOUND\n\nFile Not Found (oopsie)'
 
     # Send HTTP response
-    response = 'HTTP/1.0 200 OK\n\n' + content
     client_connection.sendall(response.encode())
     # Close client connnection
     client_connection.close()
