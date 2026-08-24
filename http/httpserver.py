@@ -26,8 +26,15 @@ while True:
     request = client_connection.recv(1024).decode()
     print(request)
 
+    """
+    TODO: **Proper header parsing** ⭐⭐
+    The tutorial only ever reads `headers[0]` — the request line. Everything else (`Host`, `Content-Type`, `Content-Length`, `Connection`, etc.) is ignored.
+    Parse the full header block into a dict/map, not just the first line.
+    Signal: string/protocol parsing, edge cases (folded headers, case-insensitivity, duplicate headers).
+    """
     # Parse HTTP headers, e.g. GET /ipsum.html HTTP1.1\n...
     headers = request.split('\n')
+    print(header for header in headers)
     # e.g. GET /ipsum.html HTTP/1.1
     filename =  headers[0].split()[1]
 

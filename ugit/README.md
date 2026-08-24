@@ -22,6 +22,27 @@ This repo picks up where the tutorial leaves off: fixing real bugs found
 along the way, adding a full test suite, and pushing the implementation
 further than the tutorial itself goes.
 
+### Robustness against Python optimization flags
+
+The original tutorial relies on `assert` statements for defensive programming.
+This implementation is **robust against Python's `-O` and `-oo` optimization
+flags** (which strip out all `assert` statements) because correctness is
+backed by proper exception handling and input validation, not assertions:
+
+- **No defensive asserts**: Critical invariants are validated with `raise
+  ValueError()` rather than `assert`, so stripping them has no impact
+- **Input validation at boundaries**: Filenames from the object store are
+  validated (e.g., `get_tree()` rejects paths with `/` or `..`), reference
+  content is parsed safely, and object types are verified on read
+- **Proper error handling**: Edge cases (circular symbolic refs, missing
+  objects, malformed tree entries) are handled explicitly, not caught by
+  asserts
+- **No behavior changes under optimization**: This code works identically
+  whether run with `python -O`, `python -oo`, or plain `python`
+
+This means `ugit` can safely be deployed in production with Python
+optimization enabled for performance, without sacrificing correctness.
+
 ---
 
 ## What this covers (and where it's limited)
