@@ -3,12 +3,16 @@
 
 """
 
+from pathlib import Path
 import socket
 
 
 # Define socket host and port
 SERVER_HOST = '0.0.0.0'
 SERVER_PORT = 8000
+
+# Get directory where httpserver.py is located
+BASE_DIR = Path(__file__).resolve().parent
 
 # Create socket
 # set server_socket variable to AF_INET (IPv4 address family) and SOCK_STREAM (~TCP)
@@ -34,7 +38,7 @@ while True:
     """
     # Parse HTTP headers, e.g. GET /ipsum.html HTTP1.1\n...
     headers = request.split('\n')
-    print(header for header in headers)
+    # print(header for header in headers)
     # e.g. GET /ipsum.html HTTP/1.1
     filename =  headers[0].split()[1]
 
@@ -42,15 +46,16 @@ while True:
     if filename in ['/', '/favicon.ico']:
         filename = '/index.html'
 
+    # Strip leading slash to prevent Path treating it as root
+    file_path = BASE_DIR / 'htdocs' / filename.lstrip('/')
+
     # ASSUMPTION: all html files are inside the htdocs folder    
     try:
-        fin = open('htdocs' + filename)
-        content = fin.read()
-        fin.close()
-
-        response = 'HTTP/1.0 200 OK\n\n' + content
+        with open(file_path, 'r', encoding='utf-8') as fin:
+            content = fin.read()
+            fin.close()
+            response = 'HTTP/1.0 200 OK\n\n' + content
     except FileNotFoundError:
-
         response = 'HTTP/1.0 404 NOT FOUND\n\nFile Not Found (oopsie)'
 
     # Send HTTP response
