@@ -14,14 +14,8 @@ SERVER_PORT = 8000
 
 # Get directory where httpserver.py is located
 BASE_DIR = Path(__file__).resolve().parent
+HTDOCS_DIR = BASE_DIR / 'htdocs'
 
-# Create socket
-# set server_socket variable to AF_INET (IPv4 address family) and SOCK_STREAM (~TCP)
-server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-server_socket.bind((SERVER_HOST, SERVER_PORT))
-server_socket.listen(1)
-print('Listening on port %s ...' % SERVER_PORT)
 
 class HeaderDict(abc.MutableMapping):
     def __init__(self):
@@ -30,8 +24,8 @@ class HeaderDict(abc.MutableMapping):
     # print(h)
     def __repr__(self):
         return '\n'.join(f"{k} : {v}" for k, v in self._data.items())
-    # inside __setitem__/__getitem__/__delitem__, is the key you store/look up under 
-    # the original casing or the normalized casing — and if you normalize, where exactly 
+    # inside __setitem__/__getitem__/__delitem__, is the key you store/look up under
+    # the original casing or the normalized casing — and if you normalize, where exactly
     # does the .upper() (or .lower()) call go?
     # h[i]
     def __getitem__(self, key):
@@ -45,41 +39,36 @@ class HeaderDict(abc.MutableMapping):
     # list[h] or for i in h: print(i)
     def __iter__(self):
         for i in self._data:
-            yield i 
+            yield i
     # len(h)
     def __len__(self):
         return len(self._data)
-    
-while True:
-    # Wait for client connections
-    client_connection, client_address = server_socket.accept()
 
-    # Get the client request (read the request string)
-    request = client_connection.recv(1024).decode()
-    print(request)
 
+def parse_header(header):
     """
     TODO: **Proper header parsing** ⭐⭐
     The tutorial only ever reads `headers[0]` — the request line. Everything else (`Host`, `Content-Type`, `Content-Length`, `Connection`, etc.) is ignored.
     Parse the full header block into a dict/map, not just the first line.
     Signal: string/protocol parsing, edge cases (folded headers, case-insensitivity, duplicate headers).
     """
-    def parse_header(header):
-        header_dict = HeaderDict()
-        lines = header.split('\n')
-        for line in lines:
-            if not line.split():
-                continue
-            if ':' not in line: 
-                header_dict["FILE"] = line.split()[1]
-                continue
-            k, v = line.split(': ')
-            # per HTTP spec, Host, host, and HOST are the same header. Headers should be case-insensitive to be safe (normalising to upper here)
-            header_dict[k] = v
-        return header_dict
+    header_dict = HeaderDict()
+    lines = header.split('\n')
+    for line in lines:
+        if not line.split():
+            continue
+        if ':' not in line:
+            header_dict["FILE"] = line.split()[1]
+            continue
+        k, v = line.split(': ')
+        # per HTTP spec, Host, host, and HOST are the same header. Headers should be case-insensitive to be safe (normalising to upper here)
+        header_dict[k] = v
+    return header_dict
 
-    # Parse HTTP headers, e.g. GET /ipsum.html HTTP1.1\n...
-    headers = parse_header(request)
+
+def resolve_file_path(headers, htdocs_dir=None):
+    if htdocs_dir is None:
+        htdocs_dir = HTDOCS_DIR
 
     # e.g. GET /ipsum.html HTTP/1.1
     filename = headers.get("file", '/')
@@ -88,24 +77,59 @@ while True:
         filename = '/index.html'
 
     # Strip leading slash to prevent Path treating it as root
-    file_path = BASE_DIR / 'htdocs' / filename.lstrip('/')
+    return htdocs_dir / filename.lstrip('/')
 
-    # ASSUMPTION: all html files are inside the htdocs folder    
+
+def build_response(request, htdocs_dir=None):
+    # Parse HTTP headers, e.g. GET /ipsum.html HTTP1.1\n...
+    headers = parse_header(request)
+    file_path = resolve_file_path(headers, htdocs_dir)
+
+    # ASSUMPTION: all html files are inside the htdocs folder
     try:
         with open(file_path, 'r', encoding='utf-8') as fin:
             content = fin.read()
-            fin.close()
             response = 'HTTP/1.0 200 OK\n\n' + content
     except FileNotFoundError:
         response = 'HTTP/1.0 404 NOT FOUND\n\nFile Not Found (oopsie)'
+
+    return response
+
+
+def handle_connection(client_connection):
+    # Get the client request (read the request string)
+    request = client_connection.recv(1024).decode()
+    print(request)
+
+    response = build_response(request)
 
     # Send HTTP response
     client_connection.sendall(response.encode())
     # Close client connnection
     client_connection.close()
 
-# Close socket
-server_socket.close()
+
+def serve_forever(host=SERVER_HOST, port=SERVER_PORT):
+    # Create socket
+    # set server_socket variable to AF_INET (IPv4 address family) and SOCK_STREAM (~TCP)
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    server_socket.bind((host, port))
+    server_socket.listen(1)
+    print('Listening on port %s ...' % port)
+
+    try:
+        while True:
+            # Wait for client connections
+            client_connection, client_address = server_socket.accept()
+            handle_connection(client_connection)
+    finally:
+        # Close socket
+        server_socket.close()
+
+
+if __name__ == "__main__":
+    serve_forever()
 
 """Second question, more important: you're normalizing on the write side (header_dict[k.upper()] = v). What happens the moment you — or future you, weeks from now, adding Content-Length handling for the POST-body TODO — writes headers.get('Content-Length') somewhere else in this file? Will that lookup succeed, given what you're actually storing the key as? If the answer is "no, because I'd need to remember to .upper() every single lookup site too," is that a robust solution, or a landmine you're leaving for yourself? Where would you put the normalization so it's impossible to forget — at write time, at read time, or somewhere that makes it moot either way (hint: is there a data structure or wrapper that does case-insensitive lookups natively)?"""
 
