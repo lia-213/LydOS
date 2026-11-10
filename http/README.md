@@ -31,14 +31,20 @@ Given that, this server intentionally does **not** implement folded-header
 parsing. Multi-value/long header values are handled the modern, spec-compliant
 way instead:
 
-- **Comma-separated values** on a single line, for headers like
-  `Cache-Control: no-cache, no-store, must-revalidate`
-- **Repeated header lines** with the same key, for headers like
-  `Set-Cookie` where combining would lose meaning
+- **Comma-separated values** on a single line, for most headers — repeating
+  a header is equivalent to sending one comma-joined line per RFC 9110
+  (`Accept: a` + `Accept: b` == `Accept: a, b`).
+- **Repeated header lines** kept as independent entries, for the small set
+  of headers where comma-joining would corrupt the value — `Set-Cookie`
+  being the primary case (each line sets one cookie with its own
+  attributes, and `Expires=Wed, 21 Oct 2026...` already contains a comma).
+  `WWW-Authenticate`/`Proxy-Authenticate` share the same hazard.
 
 `parse_header()`'s known limitation around duplicate headers (currently
-last-value-wins) is what needs fixing to support the "repeating headers"
-case properly — tracked in [`http-next-steps.md`](./http-next-steps.md).
+last-value-wins) is what needs fixing to support both cases properly —
+tracked in [`http-next-steps.md`](./http-next-steps.md). Tests for the
+target behavior already exist (TDD, currently failing) in
+[`test_unit_parse_header.py`](./tests/test_unit_parse_header.py).
 
 ---
 

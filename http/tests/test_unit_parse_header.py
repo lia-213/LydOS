@@ -37,11 +37,51 @@ def test_parse_header_get_with_default_for_missing_header():
     assert headers.get("Content-Length", "0") == "0"
 
 
-@pytest.mark.xfail(reason="known limitation: duplicate headers overwrite instead of combining (see http-next-steps.md)")
-def test_parse_header_duplicate_header_names_are_both_preserved():
-    request = "GET / HTTP/1.1\nSet-Cookie: a=1\nSet-Cookie: b=2\n"
+def test_parse_header_duplicate_general_header_is_comma_merged():
+    """RFC 9110 default: repeating a header == one comma-joined line."""
+    request = "GET / HTTP/1.1\nAccept: text/html\nAccept: application/xml\n"
     headers = parse_header(request)
-    assert headers["Set-Cookie"] == "a=1, b=2"
+    assert headers["Accept"] == "text/html, application/xml"
+
+
+def test_parse_header_three_repeats_of_a_general_header_merge_in_order():
+    request = "GET / HTTP/1.1\nAccept: a\nAccept: b\nAccept: c\n"
+    headers = parse_header(request)
+    assert headers["Accept"] == "a, b, c"
+
+
+def test_parse_header_duplicate_header_lookup_stays_case_insensitive():
+    request = "GET / HTTP/1.1\naccept: a\nACCEPT: b\n"
+    headers = parse_header(request)
+    assert headers["Accept"] == "a, b"
+
+
+def test_parse_header_set_cookie_repeats_are_kept_as_separate_entries():
+    """
+    Set-Cookie is the RFC 6265 exception: each occurrence is its own
+    independent cookie, not a fragment to comma-join.
+    """
+    request = "GET / HTTP/1.1\nSet-Cookie: session_id=abc123\nSet-Cookie: user_theme=dark\n"
+    headers = parse_header(request)
+    assert headers["Set-Cookie"] == ["session_id=abc123", "user_theme=dark"]
+
+
+def test_parse_header_set_cookie_value_containing_a_comma_is_not_corrupted():
+    """
+    Comma-joining Set-Cookie repeats would be unparseable, since an
+    Expires attribute already contains a comma (e.g. 'Wed, 21 Oct 2026').
+    Keeping entries separate avoids ever producing that broken string.
+    """
+    request = (
+        "GET / HTTP/1.1\n"
+        "Set-Cookie: session_id=abc123; Expires=Wed, 21 Oct 2026 07:28:00 GMT\n"
+        "Set-Cookie: user_theme=dark\n"
+    )
+    headers = parse_header(request)
+    assert headers["Set-Cookie"] == [
+        "session_id=abc123; Expires=Wed, 21 Oct 2026 07:28:00 GMT",
+        "user_theme=dark",
+    ]
 
 
 def test_parse_header_folded_continuation_line_is_not_supported_by_design():

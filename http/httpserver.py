@@ -29,10 +29,25 @@ class HeaderDict(abc.MutableMapping):
     # does the .upper() (or .lower()) call go?
     # h[i]
     def __getitem__(self, key):
-        return self._data[key.upper()]
+        key = key.upper()
+        print(key)
+        return self._data[key]
+        print("len is not 1")
+        for v in self._data[key]:
+            l.append(v)
+        return l
+
     # h[j] = smth
-    def __setitem__(self, key, value):
-        self._data[key.upper()] = value
+    def __setitem__(self, key, values):
+        # print(values)
+        key = key.upper()
+        if len(self._data.get(key, "")) == 1:
+            self._data[key].append(values)
+        else:
+            self._data[key] = [values]
+        print(self._data)
+
+        # print(self._data)
     # del h[l]
     def __delitem__(self, key):
         self._data.pop(key.upper())
@@ -62,7 +77,10 @@ def parse_header(header):
             continue
         k, v = line.split(': ')
         # per HTTP spec, Host, host, and HOST are the same header. Headers should be case-insensitive to be safe (normalising to upper here)
-        header_dict[k] = v
+        if k in header_dict.keys() and isinstance(header_dict[k], list):
+            header_dict[k].append(v)
+        else:
+            header_dict[k] = v
     return header_dict
 
 
